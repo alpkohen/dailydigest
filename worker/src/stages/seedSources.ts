@@ -24,20 +24,36 @@ export async function runSeedSourcesStage(env: Env, sourcesSeed: SourcesSeedConf
     groupIdByYamlKey.set(group.id, data.id);
   }
 
-  const rows = sourcesSeed.sources.map((source) => ({
+  // weight/active are owner-editable (learn's drift, Sources page mute
+  // toggle) and must never be reset back to the seed defaults on a
+  // rerun, so existing sources only get their content fields refreshed.
+  const { data: existingRows } = await db.from("sources").select("name").eq("owner_id", env.OWNER_ID);
+  const existingNames = new Set((existingRows ?? []).map((r) => r.name));
+
+  const contentFields = (source: SourcesSeedConfig["sources"][number]) => ({
     owner_id: env.OWNER_ID,
     name: source.name,
     type: source.type,
     url_or_query: source.type === "api_openalex" ? source.issn ?? null : source.url ?? null,
     language: source.lang ?? null,
     perspective_group_id: source.group ? (groupIdByYamlKey.get(source.group) ?? null) : null,
-    weight: source.weight,
     paywalled: source.paywalled ?? false,
-    active: true,
-  }));
+  });
 
-  const { error } = await db.from("sources").upsert(rows, { onConflict: "owner_id,name" });
-  if (error) throw new Error(`Failed to upsert sources: ${error.message}`);
+  const newRows = sourcesSeed.sources
+    .filter((s) => !existingNames.has(s.name))
+    .map((s) => ({ ...contentFields(s), weight: s.weight, active: true }));
+  const updateRows = sourcesSeed.sources.filter((s) => existingNames.has(s.name)).map(contentFields);
+
+  if (newRows.length > 0) {
+    const { error } = await db.from("sources").insert(newRows);
+    if (error) throw new Error(`Failed to insert new sources: ${error.message}`);
+  }
+  if (updateRows.length > 0) {
+    const { error } = await db.from("sources").upsert(updateRows, { onConflict: "owner_id,name" });
+    if (error) throw new Error(`Failed to update existing sources: ${error.message}`);
+  }
+  const rows = [...newRows, ...updateRows];
 
   const missingUrl = sourcesSeed.sources.filter(
     (s) => s.type === "rss" && !s.url,

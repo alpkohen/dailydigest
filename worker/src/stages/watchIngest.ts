@@ -60,7 +60,10 @@ export async function runWatchIngestStage(env: Env, limits: LimitsConfig, date: 
         continue;
       }
 
-      const { data: item } = await db
+      // ignoreDuplicates: true, matching ingest.ts's insertItems — an
+      // already-processed item must not be silently reset to "new" just
+      // because a watch's search re-surfaces the same URL.
+      await db
         .from("items")
         .upsert(
           {
@@ -70,9 +73,14 @@ export async function runWatchIngestStage(env: Env, limits: LimitsConfig, date: 
             title: result.title,
             status: "new",
           },
-          { onConflict: "owner_id,canonical_url", ignoreDuplicates: false },
-        )
+          { onConflict: "owner_id,canonical_url", ignoreDuplicates: true },
+        );
+
+      const { data: item } = await db
+        .from("items")
         .select("id")
+        .eq("owner_id", env.OWNER_ID)
+        .eq("canonical_url", canonicalUrl)
         .single();
       if (!item) continue;
 

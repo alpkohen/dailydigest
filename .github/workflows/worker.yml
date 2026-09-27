@@ -43,6 +43,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
           OWNER_ID: ${{ secrets.OWNER_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BRIEF_RECIPIENT_EMAIL: ${{ secrets.BRIEF_RECIPIENT_EMAIL }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
+          WEB_APP_URL: ${{ secrets.WEB_APP_URL }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.all }}" = "true" ]; then
             pnpm worker:run --all

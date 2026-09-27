@@ -27,6 +27,10 @@ export async function runQuestionUpdateStage(env: Env, models: ModelsConfig, dat
   const periodEnd = new Date(date);
   const periodStart = new Date(periodEnd);
   periodStart.setDate(periodStart.getDate() - 7);
+  // Exclusive upper bound (start of the day after periodEnd) so a rerun
+  // for a past date doesn't pull in evidence logged after that date.
+  const periodEndExclusive = new Date(periodEnd);
+  periodEndExclusive.setDate(periodEndExclusive.getDate() + 1);
 
   let written = 0;
   for (const question of questions ?? []) {
@@ -34,7 +38,8 @@ export async function runQuestionUpdateStage(env: Env, models: ModelsConfig, dat
       .from("question_evidence")
       .select("stance, note, stories(title)")
       .eq("question_id", question.id)
-      .gte("created_at", periodStart.toISOString());
+      .gte("created_at", periodStart.toISOString())
+      .lt("created_at", periodEndExclusive.toISOString());
 
     const evidence = ((evidenceRows ?? []) as unknown as { stance: string; note: string; stories: { title: string } | null }[]).map((r) => ({
       stance: r.stance,

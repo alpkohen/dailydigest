@@ -16,11 +16,13 @@ export async function submitStoryFeedbackAction(storyId: string, signal: string)
     context: "app",
   });
 
-  // SPEC.md section 4.13: "saved" feedback also lands on the reading list.
+  // SPEC.md section 4.13: "saved" feedback also lands on the reading
+  // list. ignoreDuplicates means re-saving an already-listed story is a
+  // no-op instead of overwriting its tags/notes back to empty.
   if (signal === "saved") {
     await supabase.from("reading_list").upsert(
-      { owner_id: userData.user.id, story_id: storyId, tags: [] },
-      { onConflict: "owner_id,story_id" },
+      { owner_id: userData.user.id, story_id: storyId },
+      { onConflict: "owner_id,story_id", ignoreDuplicates: true },
     );
   }
 

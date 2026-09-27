@@ -40,5 +40,13 @@ export async function GET(request: NextRequest) {
     await db.from("sources").update({ active: false }).eq("id", payload.targetId);
   }
 
+  // Mirrors submitStoryFeedbackAction: "saved" also lands on the reading
+  // list, and ignoreDuplicates keeps a re-click from wiping tags/notes.
+  if (payload.signal === "saved" && payload.targetType === "story") {
+    await db
+      .from("reading_list")
+      .upsert({ owner_id: ownerId, story_id: payload.targetId }, { onConflict: "owner_id,story_id", ignoreDuplicates: true });
+  }
+
   return NextResponse.redirect(new URL(`/feedback-confirmed?ok=true&signal=${payload.signal}`, request.url));
 }
