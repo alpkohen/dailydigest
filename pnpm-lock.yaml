@@ -168,6 +168,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@dailydigest/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@dailydigest/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@supabase/ssr':
         specifier: ^0.5.0
         version: 0.5.2(@supabase/supabase-js@2.117.2)
