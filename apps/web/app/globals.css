@@ -627,7 +627,7 @@ textarea {
   font-family: var(--font-serif);
   font-style: italic;
   font-size: 15px;
-  color: var(--text-dim);
+  color: var(--accent);
 }
 
 .top-meta-status {
@@ -687,6 +687,11 @@ textarea {
   border-bottom: 1px solid var(--border);
   margin: 26px 0 0;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-item {
