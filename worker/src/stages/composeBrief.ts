@@ -90,6 +90,22 @@ interface ResearchRow {
 export async function runComposeBriefStage(env: Env, models: ModelsConfig, date: string): Promise<void> {
   const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
+  // A rerun for the same date (manual retry, a slow job overlapping the
+  // next day's schedule, etc) must not create a second daily brief: with
+  // no such guard, deliver's .single() lookup for status='ready' would
+  // find two rows and throw instead of sending anything.
+  const { data: existingBrief } = await db
+    .from("briefs")
+    .select("id, status")
+    .eq("owner_id", env.OWNER_ID)
+    .eq("kind", "daily")
+    .eq("period_date", date)
+    .maybeSingle();
+  if (existingBrief) {
+    console.log(`compose_brief: a daily brief for ${date} already exists (${existingBrief.status}), skipping`);
+    return;
+  }
+
   const { data: run, error: runError } = await db
     .from("pipeline_runs")
     .insert({ owner_id: env.OWNER_ID, kind: "manual", stats: { stage: "compose_brief", date } })
