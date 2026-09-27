@@ -16,9 +16,9 @@ export async function fetchRssFeed(feedUrl: string): Promise<RssItem[]> {
   return (feed.items ?? [])
     .filter((item): item is typeof item & { link: string; title: string } => Boolean(item.link && item.title))
     .map((item) => ({
-      title: item.title,
+      title: item.title.trim().replace(/\s+/g, " "),
       url: item.link,
-      standfirst: item.contentSnippet ?? item.summary,
+      standfirst: item.contentSnippet?.trim().replace(/\s+/g, " ") ?? item.summary?.trim().replace(/\s+/g, " "),
       author: item.creator ?? item.author,
       publishedAt: item.isoDate ?? item.pubDate,
     }));

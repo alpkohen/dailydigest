@@ -26,8 +26,8 @@ async function fetchSampleTitles(db: SupabaseClient, storyId: string): Promise<s
     .select("items(title)")
     .eq("story_id", storyId)
     .limit(3);
-  return ((data ?? []) as { items: { title: string }[] }[])
-    .map((row) => row.items?.[0]?.title)
+  return ((data ?? []) as unknown as { items: { title: string } | null }[])
+    .map((row) => row.items?.title)
     .filter((t): t is string => Boolean(t));
 }
 
@@ -36,8 +36,8 @@ async function linkStoryTopics(db: SupabaseClient, ownerId: string, storyId: str
     .from("item_topic_scores")
     .select("topic_id, score, topics(relevance_threshold)")
     .eq("item_id", itemId);
-  for (const row of (scores ?? []) as { topic_id: string; score: number; topics: { relevance_threshold: number }[] }[]) {
-    const threshold = row.topics?.[0]?.relevance_threshold;
+  for (const row of (scores ?? []) as unknown as { topic_id: string; score: number; topics: { relevance_threshold: number } | null }[]) {
+    const threshold = row.topics?.relevance_threshold;
     if (threshold != null && row.score >= threshold) {
       await db
         .from("story_topics")

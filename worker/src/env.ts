@@ -11,6 +11,14 @@ const envSchema = z.object({
   // Optional (SPEC.md section 15, open decision #5): ingest's exa jobs are
   // skipped with a warning when unset rather than failing the stage.
   EXA_API_KEY: z.string().optional(),
+  // Optional: deliver stage skips sending (brief stays "ready") when unset.
+  RESEND_API_KEY: z.string().optional(),
+  // Where the brief is sent. No signup/allowlist flow exists yet, so this
+  // defaults to the same address as the owner allowlist.
+  BRIEF_RECIPIENT_EMAIL: z.string().email().optional(),
+  // Defaults to Resend's shared test sender until a custom domain is
+  // verified (SPEC.md section 15, open decision #6).
+  RESEND_FROM_EMAIL: z.string().optional(),
   // UUID of the single owner's auth.users row. There is no signup flow yet
   // (SPEC.md section 2: one owner, allowlisted by OWNER_EMAIL in the web
   // app), so this is captured once after the first magic-link sign-in and

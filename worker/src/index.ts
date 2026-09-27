@@ -1,13 +1,18 @@
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
 import { runClusterStage } from "./stages/cluster.js";
+import { runComposeBriefStage } from "./stages/composeBrief.js";
 import { runCreateTopicStage } from "./stages/createTopic.js";
 import { runDedupStage } from "./stages/dedup.js";
+import { runDeliverStage } from "./stages/deliver.js";
 import { runEmbedStage } from "./stages/embed.js";
+import { runEnrichStage } from "./stages/enrich.js";
 import { runExtractStage } from "./stages/extract.js";
 import { runIngestStage } from "./stages/ingest.js";
 import { runPingStage } from "./stages/ping.js";
 import { runRelevanceStage } from "./stages/relevance.js";
+import { runResearchSummaryStage } from "./stages/researchSummary.js";
+import { runScoreStage } from "./stages/score.js";
 import { runSeedSourcesStage } from "./stages/seedSources.js";
 
 type WorkerConfig = Awaited<ReturnType<typeof loadWorkerConfig>>;
@@ -22,6 +27,11 @@ const STAGES: Record<string, Stage> = {
   dedup: (env, config, date) => runDedupStage(env, config.limits, date),
   relevance: (env, config, date) => runRelevanceStage(env, config.models, config.limits, date),
   cluster: (env, config, date) => runClusterStage(env, config.models, config.limits, date),
+  score: (env, config, date) => runScoreStage(env, config.models, date),
+  enrich: (env, config, date) => runEnrichStage(env, config.models, date),
+  research_summary: (env, config, date) => runResearchSummaryStage(env, config.models, date),
+  compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, date),
+  deliver: (env, _config, date) => runDeliverStage(env, date),
   create_topic: (env, config, _date, args) => {
     const sentence = args.get("topic");
     if (!sentence) throw new Error('create_topic requires --topic="<one sentence>"');
@@ -30,9 +40,23 @@ const STAGES: Record<string, Stage> = {
 };
 
 // Order matters for --all: sources before ingest, items before
-// extract/embed/dedup/relevance. create_topic is deliberately excluded from
+// extract/embed/dedup/relevance/cluster, stories before score/enrich,
+// enrich before compose_brief. create_topic is deliberately excluded from
 // --all since it needs a --topic argument and is a one-off owner action.
-const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract", "embed", "dedup", "relevance", "cluster"];
+const ALL_STAGE_ORDER = [
+  "seed_sources",
+  "ingest",
+  "extract",
+  "embed",
+  "dedup",
+  "relevance",
+  "cluster",
+  "score",
+  "enrich",
+  "research_summary",
+  "compose_brief",
+  "deliver",
+];
 
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();
