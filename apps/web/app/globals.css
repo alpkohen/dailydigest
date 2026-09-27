@@ -239,6 +239,16 @@ textarea {
   color: var(--text-faint);
 }
 
+.sidebar-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-menu-toggle {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     flex-direction: column;
@@ -247,25 +257,43 @@ textarea {
     width: 100%;
     height: auto;
     position: static;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
     padding: 14px 16px;
-    gap: 4px 18px;
   }
   .sidebar-logo-row {
     margin-bottom: 0;
-    margin-right: 6px;
+  }
+  .sidebar-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-panel-alt);
+    color: var(--text-dim);
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 12px;
   }
   .sidebar-eyebrow,
   .sidebar-topics,
   .sidebar-footer {
     display: none;
   }
-  .sidebar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 4px 14px;
+  .sidebar.menu-open .sidebar-eyebrow {
+    display: block;
+  }
+  .sidebar.menu-open .sidebar-topics {
+    display: flex;
+  }
+  .sidebar.menu-open .sidebar-footer {
+    display: flex;
   }
 }
 

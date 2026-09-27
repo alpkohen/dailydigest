@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
-import { IconArchive, IconBookmark, IconToday } from "./icons";
+import { IconArchive, IconBookmark, IconClose, IconMenu, IconToday } from "./icons";
 
 const PRIMARY_LINKS = [
   { href: "/", label: "Today", icon: IconToday },
@@ -34,10 +35,21 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
   const visibleTopics = topics.slice(0, MAX_VISIBLE_TOPICS);
   const hiddenCount = topics.length - visibleTopics.length;
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  // A route change (tapping a link) should close the mobile dropdown.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo-row">
-        <Image src="/brand/world-brief-mark.webp" alt="World Brief." width={1248} height={226} className="sidebar-logo-mark" priority />
+    <aside className={`sidebar${menuOpen ? " menu-open" : ""}`}>
+      <div className="sidebar-top-row">
+        <div className="sidebar-logo-row">
+          <Image src="/brand/world-brief-mark.webp" alt="World Brief." width={1248} height={226} className="sidebar-logo-mark" priority />
+        </div>
+        <button className="sidebar-menu-toggle" onClick={() => setMenuOpen((v) => !v)} aria-label={menuOpen ? "Close menu" : "Open menu"}>
+          {menuOpen ? <IconClose /> : <IconMenu />}
+        </button>
       </div>
 
       <p className="sidebar-eyebrow">Your desk</p>
