@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { AiTag } from "@/components/AiTag";
 import { AskStory } from "./AskStory";
 import { FeedbackButtons } from "./FeedbackButtons";
 
@@ -39,7 +40,10 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main>
-      <span className="badge badge-critical">Tier {story.tier ?? "?"}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="badge badge-critical">Tier {story.tier ?? "?"}</span>
+        {story.summary && <AiTag label="AI-enriched" />}
+      </div>
       <h1 className="h1-serif" style={{ marginTop: 10 }}>{story.title}</h1>
 
       {topics.length > 0 && <p className="row-meta" style={{ fontSize: 12 }}>{topics.join(" · ")}</p>}

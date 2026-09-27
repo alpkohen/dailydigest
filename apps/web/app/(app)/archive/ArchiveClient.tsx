@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AiTag } from "@/components/AiTag";
 import { askArchiveAction, searchArchiveAction, type SearchResultItem } from "./actions";
 
 export function ArchiveClient() {
@@ -85,7 +86,8 @@ export function ArchiveClient() {
         </form>
         {answer && (
           <div style={{ marginTop: 10 }}>
-            <p className="dek" style={{ color: "var(--text)" }}>
+            <AiTag />
+            <p className="dek" style={{ color: "var(--text)", marginTop: 6 }}>
               {answer}
             </p>
             {citations.length > 0 && (

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { AiTag } from "@/components/AiTag";
 
 const STANCE_LABELS: Record<string, string> = { supports: "Supports", complicates: "Complicates", neutral: "Neutral context" };
 
@@ -32,7 +33,10 @@ export default async function QuestionDetailPage({ params }: { params: Promise<{
       <span className={`badge ${question.active ? "badge-accent" : "badge-neutral"}`}>{question.active ? "active" : "inactive"}</span>
 
       <section className="section">
-        <h2 className="h2-section">Weekly updates</h2>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 className="h2-section" style={{ marginBottom: 0 }}>Weekly updates</h2>
+          {(updateRows ?? []).length > 0 && <AiTag />}
+        </div>
         {(updateRows ?? []).map((u) => (
           <div key={u.id} style={{ margin: "14px 0" }}>
             <div className="row-meta">

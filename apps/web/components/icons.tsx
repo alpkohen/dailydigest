@@ -40,6 +40,14 @@ export function IconCheck({ className }: { className?: string }) {
   );
 }
 
+export function IconSpark({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2L12 2Z" />
+    </svg>
+  );
+}
+
 export function IconArrowRight({ className }: { className?: string }) {
   return (
     <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

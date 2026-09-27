@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AiTag } from "@/components/AiTag";
 import { askStoryAction } from "./askAction";
 
 export function AskStory({ storyId }: { storyId: string }) {
@@ -30,7 +31,12 @@ export function AskStory({ storyId }: { storyId: string }) {
           {pending ? "..." : "Ask"}
         </button>
       </form>
-      {answer && <p className="dek" style={{ color: "var(--text)", marginTop: 10 }}>{answer}</p>}
+      {answer && (
+        <div style={{ marginTop: 10 }}>
+          <AiTag />
+          <p className="dek" style={{ color: "var(--text)", marginTop: 6 }}>{answer}</p>
+        </div>
+      )}
       {error && <p className="text-danger" style={{ fontSize: 12 }}>{error}</p>}
     </section>
   );

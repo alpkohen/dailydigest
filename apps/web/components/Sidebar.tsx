@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
-import { IconArchive, IconBookmark, IconToday } from "./icons";
+import { IconArchive, IconBookmark, IconSpark, IconToday } from "./icons";
 
 const PRIMARY_LINKS = [
   { href: "/", label: "Today", icon: IconToday },
@@ -52,6 +52,14 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
           <IconBookmark className="icon" />
           Reading list
           {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
+        </Link>
+      </nav>
+
+      <p className="sidebar-eyebrow">Transparency</p>
+      <nav className="sidebar-nav">
+        <Link href="/ai-activity" className={`sidebar-link${isActive("/ai-activity") ? " active" : ""}`}>
+          <IconSpark className="icon" />
+          AI Activity
         </Link>
       </nav>
 

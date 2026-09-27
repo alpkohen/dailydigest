@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { saveItemToReadingListAction, saveStoryToReadingListAction } from "@/app/(app)/todayActions";
 import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
+import { AiTag } from "./AiTag";
 import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
 import { pickGreeting } from "@/lib/greetings";
 
@@ -216,10 +217,13 @@ export function TodayView({
           <hr className="hr" />
 
           <section>
-            <h2 className="h2-section framing-heading">
-              <IconFrame className="framing-icon" />
-              Today&apos;s Framing
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <h2 className="h2-section framing-heading">
+                <IconFrame className="framing-icon" />
+                Today&apos;s Framing
+              </h2>
+              <AiTag label="AI-written" />
+            </div>
             <p className="dek" lang="tr">{headline}</p>
           </section>
 
@@ -241,7 +245,10 @@ export function TodayView({
                   </div>
                 )}
                 <div className="feed-footer">
-                  <span className="feed-meta">{sourceMeta(leadStory.sourceCount, leadStory.perspectiveCount) ?? leadStory.topics.join(", ")}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <AiTag label="AI summary" />
+                    <span className="feed-meta">{sourceMeta(leadStory.sourceCount, leadStory.perspectiveCount) ?? leadStory.topics.join(", ")}</span>
+                  </span>
                   <SaveStoryButton storyId={leadStory.id} initiallySaved={savedStorySet.has(leadStory.id)} />
                 </div>
               </div>
@@ -258,7 +265,10 @@ export function TodayView({
                 </Link>
                 <p className="feed-desc" lang="tr">{story.summary}</p>
                 <div className="feed-footer">
-                  <span className="feed-meta">{sourceMeta(story.sourceCount, story.perspectiveCount) ?? story.topics.join(", ")}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <AiTag label="AI summary" />
+                    <span className="feed-meta">{sourceMeta(story.sourceCount, story.perspectiveCount) ?? story.topics.join(", ")}</span>
+                  </span>
                   <SaveStoryButton storyId={story.id} initiallySaved={savedStorySet.has(story.id)} />
                 </div>
               </div>
@@ -273,7 +283,10 @@ export function TodayView({
                 <div className="feed-headline">{r.title}</div>
                 <p className="feed-desc" lang="tr">{r.argument}</p>
                 <div className="feed-footer">
-                  <span className="feed-meta">Research note</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <AiTag label="AI summary" />
+                    <span className="feed-meta">Research note</span>
+                  </span>
                   {r.itemId && <SaveItemButton itemId={r.itemId} initiallySaved={savedItemSet.has(r.itemId)} />}
                 </div>
               </div>
@@ -294,8 +307,11 @@ export function TodayView({
 
             {questionWidget && (
               <div className="rail-card-v2">
-                <p className="rail-card-eyebrow">Question you&apos;re tracking</p>
-                <p className="rail-card-title-v2" lang="tr">{questionWidget.text}</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <p className="rail-card-eyebrow" style={{ marginBottom: 0 }}>Question you&apos;re tracking</p>
+                  <AiTag />
+                </div>
+                <p className="rail-card-title-v2" lang="tr" style={{ marginTop: 8 }}>{questionWidget.text}</p>
                 <p className="rail-card-desc" lang="tr">{questionWidget.note}</p>
                 <Link href={`/story/${questionWidget.storyId}`} className="rail-card-link">
                   Related development <IconArrowRight />
@@ -305,8 +321,11 @@ export function TodayView({
 
             {outsideRadar && (
               <div className="rail-card-v2">
-                <p className="rail-card-eyebrow">Outside your radar</p>
-                <p className="rail-card-title-v2" lang="tr">{outsideRadar.title}</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <p className="rail-card-eyebrow" style={{ marginBottom: 0 }}>Outside your radar</p>
+                  <AiTag />
+                </div>
+                <p className="rail-card-title-v2" lang="tr" style={{ marginTop: 8 }}>{outsideRadar.title}</p>
                 <p className="rail-card-desc" lang="tr">{outsideRadar.reason}</p>
                 {outsideRadar.url && (
                   <a href={outsideRadar.url} target="_blank" rel="noreferrer" className="rail-card-link">
