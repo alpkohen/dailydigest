@@ -17,20 +17,23 @@ export default async function TopicsPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 20 }}>Konular</h1>
+      <h1 className="h1-serif">Konular</h1>
       <TopicForm />
       {withPrecision.map((t) => (
         <div key={t.id}>
           <TopicRow id={t.id} name={t.name} priority={t.priority} frequency={t.frequency} active={t.active} />
           {t.precision.precision !== null && (
-            <p style={{ fontSize: 11, color: t.precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "#c33" : "#888", margin: "-4px 0 6px" }}>
+            <p
+              className={t.precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "text-danger" : "text-faint"}
+              style={{ fontSize: 11, margin: "-6px 0 10px" }}
+            >
               Kesinlik: %{Math.round(t.precision.precision * 100)} ({t.precision.sampleSize} geri bildirim)
               {t.precision.precision < PRECISION_SUGGESTION_THRESHOLD && " · Tanımı gözden geçirmeyi düşün"}
             </p>
           )}
         </div>
       ))}
-      {withPrecision.length === 0 && <p style={{ color: "#888", fontSize: 14 }}>Henüz konu yok.</p>}
+      {withPrecision.length === 0 && <p className="empty">Henüz konu yok.</p>}
     </main>
   );
 }

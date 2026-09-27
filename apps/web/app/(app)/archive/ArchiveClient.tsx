@@ -14,8 +14,8 @@ export function ArchiveClient() {
 
   return (
     <div>
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 15 }}>Ara</h2>
+      <section className="section">
+        <h2 className="h2-section">Ara</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -26,30 +26,37 @@ export function ArchiveClient() {
               else setResults(r.results ?? []);
             });
           }}
-          style={{ display: "flex", gap: 8 }}
+          className="form-row"
         >
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ör: Türkiye AB gümrük birliği" style={{ flex: 1, padding: "8px 10px", fontSize: 14 }} />
-          <button type="submit" disabled={pending}>
+          <input
+            className="input grow"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ör: Türkiye AB gümrük birliği"
+          />
+          <button type="submit" className="btn btn-primary" disabled={pending}>
             Ara
           </button>
         </form>
         {results && (
-          <div style={{ marginTop: 10 }}>
+          <div className="link-list" style={{ marginTop: 10 }}>
             {results.map((r) => (
-              <a key={r.id} href={r.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "8px 0", borderBottom: "1px solid #f0f0f0", color: "inherit", textDecoration: "none" }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{r.title}</div>
-                <div style={{ fontSize: 11, color: "#888" }}>
+              <a key={r.id} href={r.url} target="_blank" rel="noreferrer">
+                <div className="row-title" style={{ fontSize: 13 }}>
+                  {r.title}
+                </div>
+                <div className="row-meta">
                   {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString("tr-TR") : "?"} · {r.language ?? "?"}
                 </div>
               </a>
             ))}
-            {results.length === 0 && <p style={{ color: "#888", fontSize: 13 }}>Sonuç yok.</p>}
+            {results.length === 0 && <p className="empty">Sonuç yok.</p>}
           </div>
         )}
       </section>
 
-      <section style={{ margin: "24px 0" }}>
-        <h2 style={{ fontSize: 15 }}>Arşive sor</h2>
+      <section className="section">
+        <h2 className="h2-section">Arşive sor</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -64,21 +71,28 @@ export function ArchiveClient() {
               }
             });
           }}
-          style={{ display: "flex", gap: 8 }}
+          className="form-row"
         >
-          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ör: AB'nin Türkiye üyeliğine ilişkin dili son 6 ayda nasıl değişti?" style={{ flex: 1, padding: "8px 10px", fontSize: 14 }} />
-          <button type="submit" disabled={pending}>
+          <input
+            className="input grow"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="ör: AB'nin Türkiye üyeliğine ilişkin dili son 6 ayda nasıl değişti?"
+          />
+          <button type="submit" className="btn btn-primary" disabled={pending}>
             {pending ? "..." : "Sor"}
           </button>
         </form>
         {answer && (
           <div style={{ marginTop: 10 }}>
-            <p style={{ fontSize: 14, lineHeight: "21px" }}>{answer}</p>
+            <p className="dek" style={{ color: "var(--text)" }}>
+              {answer}
+            </p>
             {citations.length > 0 && (
-              <div style={{ fontSize: 12, color: "#666" }}>
+              <div className="row-meta">
                 Kaynaklar:{" "}
                 {citations.map((c, i) => (
-                  <a key={c.id} href={c.url} target="_blank" rel="noreferrer" style={{ color: "#666", marginRight: 6 }}>
+                  <a key={c.id} href={c.url} target="_blank" rel="noreferrer" className="text-accent" style={{ marginRight: 6 }}>
                     [{i + 1}]
                   </a>
                 ))}
@@ -88,7 +102,7 @@ export function ArchiveClient() {
         )}
       </section>
 
-      {error && <p style={{ color: "#c00", fontSize: 13 }}>{error}</p>}
+      {error && <p className="text-danger" style={{ fontSize: 13 }}>{error}</p>}
     </div>
   );
 }

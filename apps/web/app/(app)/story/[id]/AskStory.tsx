@@ -10,8 +10,8 @@ export function AskStory({ storyId }: { storyId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <section style={{ margin: "16px 0" }}>
-      <h2 style={{ fontSize: 15 }}>Bu story hakkında sor</h2>
+    <section className="section">
+      <h2 className="h2-section">Bu story hakkında sor</h2>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -23,15 +23,15 @@ export function AskStory({ storyId }: { storyId: string }) {
             else setAnswer(r.answer ?? null);
           });
         }}
-        style={{ display: "flex", gap: 8 }}
+        className="form-row"
       >
-        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="bir soru yaz..." style={{ flex: 1, padding: "6px 8px", fontSize: 13 }} />
-        <button type="submit" disabled={pending}>
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="bir soru yaz..." className="input grow" />
+        <button type="submit" className="btn btn-primary" disabled={pending}>
           {pending ? "..." : "Sor"}
         </button>
       </form>
-      {answer && <p style={{ fontSize: 13, lineHeight: "20px", marginTop: 8 }}>{answer}</p>}
-      {error && <p style={{ fontSize: 12, color: "#c00" }}>{error}</p>}
+      {answer && <p className="dek" style={{ color: "var(--text)", marginTop: 10 }}>{answer}</p>}
+      {error && <p className="text-danger" style={{ fontSize: 12 }}>{error}</p>}
     </section>
   );
 }

@@ -35,44 +35,44 @@ export function SettingsForm({
           else setSaved(true);
         });
       }}
-      style={{ display: "grid", gap: 12, maxWidth: 360, fontSize: 14 }}
+      style={{ display: "grid", gap: 16, maxWidth: 380 }}
     >
-      <label>
-        Dil
-        <select name="language" defaultValue={language} style={{ display: "block", width: "100%", padding: 6 }}>
+      <label className="field">
+        <span className="field-label">Dil</span>
+        <select name="language" defaultValue={language} className="select">
           <option value="tr">Türkçe</option>
           <option value="en">English</option>
         </select>
       </label>
-      <label>
-        Saat dilimi
-        <input name="timezone" defaultValue={timezone} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">Saat dilimi</span>
+        <input name="timezone" defaultValue={timezone} className="input" />
       </label>
-      <label>
-        Brief gönderim saati
-        <input name="brief_time" type="time" defaultValue={briefTime} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">Brief gönderim saati</span>
+        <input name="brief_time" type="time" defaultValue={briefTime} className="input" />
       </label>
-      <label>
-        Sessiz saatler başlangıç
-        <input name="quiet_start" type="time" defaultValue={quietStart} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">Sessiz saatler başlangıç</span>
+        <input name="quiet_start" type="time" defaultValue={quietStart} className="input" />
       </label>
-      <label>
-        Sessiz saatler bitiş
-        <input name="quiet_end" type="time" defaultValue={quietEnd} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">Sessiz saatler bitiş</span>
+        <input name="quiet_end" type="time" defaultValue={quietEnd} className="input" />
       </label>
-      <label>
-        Günlük LLM bütçesi (USD)
-        <input name="daily_budget_usd" type="number" step="0.5" min="0" defaultValue={dailyBudgetUsd} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">Günlük LLM bütçesi (USD)</span>
+        <input name="daily_budget_usd" type="number" step="0.5" min="0" defaultValue={dailyBudgetUsd} className="input" />
       </label>
-      <label>
-        İlgi profili (outside radar seçimini yönlendirir)
-        <textarea name="interest_profile" defaultValue={interestProfile} rows={3} style={{ display: "block", width: "100%", padding: 6 }} />
+      <label className="field">
+        <span className="field-label">İlgi profili (outside radar seçimini yönlendirir)</span>
+        <textarea name="interest_profile" defaultValue={interestProfile} rows={3} className="textarea" />
       </label>
-      <button type="submit" disabled={pending} style={{ justifySelf: "start" }}>
+      <button type="submit" className="btn btn-primary" disabled={pending} style={{ justifySelf: "start" }}>
         {pending ? "Kaydediliyor..." : "Kaydet"}
       </button>
-      {saved && <span style={{ color: "#2a7" }}>Kaydedildi.</span>}
-      {error && <span style={{ color: "#c00" }}>{error}</span>}
+      {saved && <span className="text-accent" style={{ fontSize: 13 }}>Kaydedildi.</span>}
+      {error && <span className="text-danger" style={{ fontSize: 13 }}>{error}</span>}
     </form>
   );
 }

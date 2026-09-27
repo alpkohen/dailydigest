@@ -18,22 +18,19 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ fontFamily: "sans-serif", padding: "2rem", maxWidth: 400 }}>
-      <h1>dailydigest</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ display: "block", width: "100%", margin: "0.5rem 0", padding: "0.5rem" }}
-        />
-        <button type="submit">Send magic link</button>
+    <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
+      <h1 className="h1-serif">World Brief.</h1>
+      <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
+        <label className="field">
+          <span className="field-label">E-posta</span>
+          <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input" />
+        </label>
+        <button type="submit" className="btn btn-primary">
+          Giriş linki gönder
+        </button>
       </form>
-      {status === "sent" && <p>Check your inbox for the sign-in link.</p>}
-      {status === "error" && <p>Something went wrong sending the link.</p>}
+      {status === "sent" && <p className="text-accent" style={{ fontSize: 13, marginTop: 16 }}>Giriş linki için gelen kutunu kontrol et.</p>}
+      {status === "error" && <p className="text-danger" style={{ fontSize: 13, marginTop: 16 }}>Link gönderilirken bir sorun oluştu.</p>}
     </main>
   );
 }

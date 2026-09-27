@@ -29,46 +29,42 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
 
   return (
     <main>
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>{topic.name}</h1>
-      <p style={{ fontSize: 12, color: "#888" }}>
+      <h1 className="h1-serif">{topic.name}</h1>
+      <span className={`badge ${topic.active ? "badge-accent" : "badge-neutral"}`}>
         {topic.priority} · {topic.frequency} · {topic.active ? "aktif" : "pasif"}
-      </p>
-      {topic.description && <p style={{ fontSize: 14, lineHeight: "21px" }}>{topic.description}</p>}
+      </span>
+      {topic.description && <p className="dek" style={{ marginTop: 12 }}>{topic.description}</p>}
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 14 }}>Sorgular</h2>
-        <p style={{ fontSize: 13, color: "#444" }}>TR: {(topic.queries_tr ?? []).join(" | ")}</p>
-        <p style={{ fontSize: 13, color: "#444" }}>EN: {(topic.queries_en ?? []).join(" | ")}</p>
-        {topic.exclusions?.length > 0 && <p style={{ fontSize: 13, color: "#888" }}>Hariç: {topic.exclusions.join(", ")}</p>}
+      <section className="section">
+        <h2 className="h2-section">Sorgular</h2>
+        <p className="row-summary">TR: {(topic.queries_tr ?? []).join(" | ")}</p>
+        <p className="row-summary">EN: {(topic.queries_en ?? []).join(" | ")}</p>
+        {topic.exclusions?.length > 0 && <p className="text-faint" style={{ fontSize: 13 }}>Hariç: {topic.exclusions.join(", ")}</p>}
       </section>
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 14 }}>Kesinlik</h2>
+      <section className="section">
+        <h2 className="h2-section">Kesinlik</h2>
         {precision.precision !== null ? (
-          <p style={{ fontSize: 13, color: precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "#c33" : "#444" }}>
+          <p className={precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "text-danger" : "row-summary"} style={{ fontSize: 13 }}>
             Sürülen içeriğin %{Math.round(precision.precision * 100)}&apos;i ilgili işaretlendi ({precision.sampleSize} geri bildirim).
             {precision.precision < PRECISION_SUGGESTION_THRESHOLD && " Tanımı gözden geçirmeyi düşün."}
           </p>
         ) : (
-          <p style={{ fontSize: 13, color: "#888" }}>Henüz yeterli geri bildirim yok.</p>
+          <p className="empty">Henüz yeterli geri bildirim yok.</p>
         )}
       </section>
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 14 }}>Story zaman çizelgesi ({stories.length})</h2>
+      <section className="section">
+        <h2 className="h2-section">Story zaman çizelgesi ({stories.length})</h2>
         {stories.map((s) => (
-          <Link
-            key={s.id}
-            href={`/story/${s.id}`}
-            style={{ display: "block", padding: "8px 0", borderBottom: "1px solid #f0f0f0", color: "inherit", textDecoration: "none" }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{s.title}</div>
-            <div style={{ fontSize: 11, color: "#888" }}>
+          <Link key={s.id} href={`/story/${s.id}`} className="row-link">
+            <div className="row-title">{s.title}</div>
+            <div className="row-meta">
               Tier {s.tier ?? "?"} · {new Date(s.first_seen_at).toLocaleDateString("tr-TR")}
             </div>
           </Link>
         ))}
-        {stories.length === 0 && <p style={{ color: "#888", fontSize: 13 }}>Henüz story yok.</p>}
+        {stories.length === 0 && <p className="empty">Henüz story yok.</p>}
       </section>
     </main>
   );

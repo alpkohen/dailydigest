@@ -8,11 +8,11 @@ export function QuestionRow({ id, text, active }: { id: string; text: string; ac
   const [pending, startTransition] = useTransition();
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
-      <Link href={`/questions/${id}`} style={{ fontSize: 14, color: "inherit", textDecoration: "none", flex: 1 }}>
+    <div className="row-flex">
+      <Link href={`/questions/${id}`} className="row-title" style={{ flex: 1, textDecoration: "none" }}>
         {text}
       </Link>
-      <button disabled={pending} onClick={() => startTransition(() => setQuestionActiveAction(id, !active))}>
+      <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setQuestionActiveAction(id, !active))}>
         {active ? "Duraklat" : "Etkinleştir"}
       </button>
     </div>

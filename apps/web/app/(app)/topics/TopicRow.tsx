@@ -19,21 +19,21 @@ export function TopicRow({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
+    <div className="row-flex">
       <div>
-        <a href={`/topics/${id}`} style={{ fontWeight: 600, fontSize: 14, color: "inherit", textDecoration: "none" }}>
+        <a href={`/topics/${id}`} className="row-title" style={{ textDecoration: "none", display: "block" }}>
           {name}
         </a>
-        <div style={{ fontSize: 11, color: "#888" }}>
+        <div className="row-meta">
           {priority} · {frequency} · {active ? "aktif" : "pasif"}
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button disabled={pending} onClick={() => startTransition(() => setTopicActiveAction(id, !active))}>
+        <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setTopicActiveAction(id, !active))}>
           {active ? "Duraklat" : "Etkinleştir"}
         </button>
         {active && (
-          <button disabled={pending} onClick={() => startTransition(() => deleteTopicAction(id))}>
+          <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => deleteTopicAction(id))}>
             Sil
           </button>
         )}

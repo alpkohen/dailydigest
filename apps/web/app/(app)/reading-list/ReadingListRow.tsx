@@ -24,38 +24,46 @@ export function ReadingListRow({
   const [tagsValue, setTagsValue] = useState(tags.join(", "));
 
   return (
-    <div style={{ padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <a href={href} style={{ fontSize: 14, fontWeight: 600, color: isRead ? "#999" : "inherit", textDecoration: isRead ? "line-through" : "none" }}>
+    <div className="row-flex" style={{ display: "block" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <a
+          href={href}
+          className="row-title"
+          style={{
+            textDecoration: isRead ? "line-through" : "none",
+            color: isRead ? "var(--text-faint)" : "var(--text)",
+          }}
+        >
           {title}
         </a>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button disabled={pending} onClick={() => startTransition(() => toggleReadAction(id, !isRead))} style={{ fontSize: 11 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => toggleReadAction(id, !isRead))}>
             {isRead ? "Okunmadı yap" : "Okundu"}
           </button>
-          <button disabled={pending} onClick={() => setEditing((v) => !v)} style={{ fontSize: 11 }}>
+          <button className="btn btn-sm" disabled={pending} onClick={() => setEditing((v) => !v)}>
             Not/etiket
           </button>
-          <button disabled={pending} onClick={() => startTransition(() => removeFromReadingListAction(id))} style={{ fontSize: 11 }}>
+          <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => removeFromReadingListAction(id))}>
             Kaldır
           </button>
         </div>
       </div>
-      {tags.length > 0 && <div style={{ fontSize: 11, color: "#888" }}>{tags.join(", ")}</div>}
-      {notes && !editing && <div style={{ fontSize: 12, color: "#444" }}>{notes}</div>}
+      {tags.length > 0 && <div className="row-meta">{tags.join(", ")}</div>}
+      {notes && !editing && <div className="row-summary">{notes}</div>}
       {editing && (
-        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
-          <input value={tagsValue} onChange={(e) => setTagsValue(e.target.value)} placeholder="etiketler, virgülle" style={{ fontSize: 12, padding: 4 }} />
-          <textarea value={notesValue} onChange={(e) => setNotesValue(e.target.value)} placeholder="not" style={{ fontSize: 12, padding: 4 }} rows={2} />
+        <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, maxWidth: 400 }}>
+          <input className="input" value={tagsValue} onChange={(e) => setTagsValue(e.target.value)} placeholder="etiketler, virgülle" />
+          <textarea className="textarea" value={notesValue} onChange={(e) => setNotesValue(e.target.value)} placeholder="not" rows={2} />
           <button
+            className="btn btn-primary btn-sm"
             disabled={pending}
+            style={{ alignSelf: "start" }}
             onClick={() =>
               startTransition(async () => {
                 await updateNotesAction(id, notesValue, tagsValue);
                 setEditing(false);
               })
             }
-            style={{ fontSize: 11, alignSelf: "start" }}
           >
             Kaydet
           </button>

@@ -19,19 +19,13 @@ export function TopicForm() {
           else formRef.current?.reset();
         });
       }}
-      style={{ margin: "16px 0", display: "flex", gap: 8 }}
+      className="form-row"
     >
-      <input
-        name="sentence"
-        placeholder="Bir cümleyle yeni bir konu tanımla..."
-        required
-        disabled={pending}
-        style={{ flex: 1, padding: "8px 10px", fontSize: 14 }}
-      />
-      <button type="submit" disabled={pending}>
+      <input name="sentence" className="input grow" placeholder="Bir cümleyle yeni bir konu tanımla..." required disabled={pending} />
+      <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? "Oluşturuluyor..." : "Ekle"}
       </button>
-      {error && <span style={{ color: "#c00", fontSize: 12, alignSelf: "center" }}>{error}</span>}
+      {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>
   );
 }

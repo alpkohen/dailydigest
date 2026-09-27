@@ -17,40 +17,44 @@ export default async function SettingsPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 20 }}>Ayarlar</h1>
-      <SettingsForm
-        language={profile?.language ?? "tr"}
-        timezone={profile?.timezone ?? "Europe/Istanbul"}
-        briefTime={profile?.brief_time?.slice(0, 5) ?? "07:00"}
-        quietStart={quietHours.start}
-        quietEnd={quietHours.end}
-        dailyBudgetUsd={profile?.daily_budget_usd ?? limits.daily_budget_usd}
-        interestProfile={profile?.interest_profile ?? ""}
-      />
+      <h1 className="h1-serif">Ayarlar</h1>
+      <div style={{ marginTop: 20 }}>
+        <SettingsForm
+          language={profile?.language ?? "tr"}
+          timezone={profile?.timezone ?? "Europe/Istanbul"}
+          briefTime={profile?.brief_time?.slice(0, 5) ?? "07:00"}
+          quietStart={quietHours.start}
+          quietEnd={quietHours.end}
+          dailyBudgetUsd={profile?.daily_budget_usd ?? limits.daily_budget_usd}
+          interestProfile={profile?.interest_profile ?? ""}
+        />
+      </div>
 
-      <section style={{ marginTop: 32 }}>
-        <h2 style={{ fontSize: 15 }}>Rol başına modeller</h2>
-        <p style={{ fontSize: 12, color: "#888" }}>Bunlar config/models.yaml üzerinden değiştirilir, buradan salt okunur gösterilir.</p>
-        <table style={{ fontSize: 13, borderCollapse: "collapse" }}>
-          <tbody>
-            <tr>
-              <td style={{ paddingRight: 16, color: "#666" }}>fast</td>
-              <td>{models.roles.fast.provider} / {models.roles.fast.model}</td>
-            </tr>
-            <tr>
-              <td style={{ paddingRight: 16, color: "#666" }}>mid</td>
-              <td>{models.roles.mid.provider} / {models.roles.mid.model}</td>
-            </tr>
-            <tr>
-              <td style={{ paddingRight: 16, color: "#666" }}>strong</td>
-              <td>{models.roles.strong.provider} / {models.roles.strong.model}</td>
-            </tr>
-            <tr>
-              <td style={{ paddingRight: 16, color: "#666" }}>embedding</td>
-              <td>{models.embedding.provider} / {models.embedding.model}</td>
-            </tr>
-          </tbody>
-        </table>
+      <section className="section">
+        <h2 className="h2-section">Rol başına modeller</h2>
+        <p className="row-meta" style={{ margin: "0 0 12px" }}>Bunlar config/models.yaml üzerinden değiştirilir, buradan salt okunur gösterilir.</p>
+        <div className="table-wrap">
+          <table className="table">
+            <tbody>
+              <tr>
+                <td className="text-faint">fast</td>
+                <td>{models.roles.fast.provider} / {models.roles.fast.model}</td>
+              </tr>
+              <tr>
+                <td className="text-faint">mid</td>
+                <td>{models.roles.mid.provider} / {models.roles.mid.model}</td>
+              </tr>
+              <tr>
+                <td className="text-faint">strong</td>
+                <td>{models.roles.strong.provider} / {models.roles.strong.model}</td>
+              </tr>
+              <tr>
+                <td className="text-faint">embedding</td>
+                <td>{models.embedding.provider} / {models.embedding.model}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );

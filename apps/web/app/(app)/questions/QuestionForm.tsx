@@ -19,19 +19,13 @@ export function QuestionForm() {
           else formRef.current?.reset();
         });
       }}
-      style={{ margin: "16px 0", display: "flex", gap: 8 }}
+      className="form-row"
     >
-      <input
-        name="text"
-        placeholder="Takip etmek istediğin analitik soru..."
-        required
-        disabled={pending}
-        style={{ flex: 1, padding: "8px 10px", fontSize: 14 }}
-      />
-      <button type="submit" disabled={pending}>
+      <input name="text" className="input grow" placeholder="Takip etmek istediğin analitik soru..." required disabled={pending} />
+      <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? "Ekleniyor..." : "Ekle"}
       </button>
-      {error && <span style={{ color: "#c00", fontSize: 12, alignSelf: "center" }}>{error}</span>}
+      {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>
   );
 }

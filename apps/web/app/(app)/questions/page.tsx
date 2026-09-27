@@ -12,12 +12,12 @@ export default async function QuestionsPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 20 }}>Sorular</h1>
+      <h1 className="h1-serif">Sorular</h1>
       <QuestionForm />
       {(questions ?? []).map((q) => (
         <QuestionRow key={q.id} id={q.id} text={q.text} active={q.active} />
       ))}
-      {(questions ?? []).length === 0 && <p style={{ color: "#888", fontSize: 14 }}>Henüz soru yok.</p>}
+      {(questions ?? []).length === 0 && <p className="empty">Henüz soru yok.</p>}
     </main>
   );
 }

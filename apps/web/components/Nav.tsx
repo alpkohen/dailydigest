@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Today" },
@@ -13,24 +16,21 @@ const LINKS = [
 ];
 
 export function Nav() {
+  const pathname = usePathname();
+
   return (
-    <nav
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 16,
-        padding: "12px 20px",
-        borderBottom: "1px solid #e5e5e5",
-        fontSize: 14,
-        alignItems: "center",
-      }}
-    >
-      <strong style={{ marginRight: 12 }}>dailydigest</strong>
-      {LINKS.map((link) => (
-        <Link key={link.href} href={link.href} style={{ color: "#333", textDecoration: "none" }}>
-          {link.label}
-        </Link>
-      ))}
+    <nav className="nav">
+      <span className="nav-logo">World Brief.</span>
+      <div className="nav-links">
+        {LINKS.map((link) => {
+          const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+          return (
+            <Link key={link.href} href={link.href} className={`nav-link${isActive ? " active" : ""}`}>
+              {link.label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

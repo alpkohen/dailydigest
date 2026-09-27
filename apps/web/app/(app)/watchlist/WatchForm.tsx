@@ -19,19 +19,19 @@ export function WatchForm() {
           else formRef.current?.reset();
         });
       }}
-      style={{ margin: "16px 0", display: "flex", gap: 8, flexWrap: "wrap" }}
+      className="form-row"
     >
-      <input name="name" placeholder="İsim (kişi, kurum, dergi)" required disabled={pending} style={{ padding: "8px 10px", fontSize: 14 }} />
-      <select name="kind" disabled={pending} style={{ padding: "8px 10px", fontSize: 14 }}>
+      <input name="name" className="input" placeholder="İsim (kişi, kurum, dergi)" required disabled={pending} />
+      <select name="kind" className="select" disabled={pending}>
         <option value="person">Kişi</option>
         <option value="institution">Kurum</option>
         <option value="journal">Dergi</option>
       </select>
-      <input name="query" placeholder="Arama sorgusu (opsiyonel, boşsa isim kullanılır)" disabled={pending} style={{ flex: 1, minWidth: 200, padding: "8px 10px", fontSize: 14 }} />
-      <button type="submit" disabled={pending}>
+      <input name="query" className="input grow" placeholder="Arama sorgusu (opsiyonel, boşsa isim kullanılır)" disabled={pending} />
+      <button type="submit" className="btn btn-primary" disabled={pending}>
         {pending ? "Ekleniyor..." : "Ekle"}
       </button>
-      {error && <span style={{ color: "#c00", fontSize: 12, alignSelf: "center" }}>{error}</span>}
+      {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>
   );
 }

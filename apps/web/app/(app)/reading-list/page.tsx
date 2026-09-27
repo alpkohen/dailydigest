@@ -28,16 +28,16 @@ export default async function ReadingListPage() {
 
   return (
     <main>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ fontSize: 20 }}>Okuma listesi</h1>
-        <a href="/api/reading-list/export" style={{ fontSize: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h1 className="h1-serif">Okuma listesi</h1>
+        <a href="/api/reading-list/export" className="text-accent" style={{ fontSize: 12, textDecoration: "none" }}>
           Markdown olarak dışa aktar
         </a>
       </div>
       {entries.map((e) => (
         <ReadingListRow key={e.id} {...e} />
       ))}
-      {entries.length === 0 && <p style={{ color: "#888", fontSize: 14 }}>Henüz kaydedilen bir şey yok. Story sayfasından &quot;Kaydet&quot; ile ekleyebilirsin.</p>}
+      {entries.length === 0 && <p className="empty">Henüz kaydedilen bir şey yok. Story sayfasından &quot;Kaydet&quot; ile ekleyebilirsin.</p>}
     </main>
   );
 }

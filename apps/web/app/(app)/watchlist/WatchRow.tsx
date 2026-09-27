@@ -9,14 +9,14 @@ export function WatchRow({ id, name, kind, active }: { id: string; name: string;
   const [pending, startTransition] = useTransition();
 
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f0f0f0" }}>
+    <div className="row-flex">
       <div>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>{name}</span>
-        <div style={{ fontSize: 11, color: "#888" }}>
+        <span className="row-title">{name}</span>
+        <div className="row-meta">
           {KIND_LABELS[kind] ?? kind} · {active ? "aktif" : "pasif"}
         </div>
       </div>
-      <button disabled={pending} onClick={() => startTransition(() => setWatchActiveAction(id, !active))}>
+      <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setWatchActiveAction(id, !active))}>
         {active ? "Duraklat" : "Etkinleştir"}
       </button>
     </div>

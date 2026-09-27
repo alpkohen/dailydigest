@@ -21,22 +21,24 @@ export default async function WatchlistPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 20 }}>Takip listesi</h1>
+      <h1 className="h1-serif">Takip listesi</h1>
       <WatchForm />
       {(watches ?? []).map((w) => (
         <WatchRow key={w.id} id={w.id} name={w.name} kind={w.kind} active={w.active} />
       ))}
-      {(watches ?? []).length === 0 && <p style={{ color: "#888", fontSize: 14 }}>Henüz takip yok.</p>}
+      {(watches ?? []).length === 0 && <p className="empty">Henüz takip yok.</p>}
 
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 15 }}>Son yakalananlar</h2>
-        {recent.map((r, i) => (
-          <a key={i} href={r.items!.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "inherit", textDecoration: "none" }}>
-            <span style={{ fontSize: 13 }}>{r.items!.title}</span>
-            <span style={{ fontSize: 11, color: "#999" }}> — {r.watches?.name}</span>
-          </a>
-        ))}
-        {recent.length === 0 && <p style={{ color: "#888", fontSize: 13 }}>Henüz bir şey yakalanmadı.</p>}
+      <section className="section">
+        <h2 className="h2-section">Son yakalananlar</h2>
+        <div className="link-list">
+          {recent.map((r, i) => (
+            <a key={i} href={r.items!.url} target="_blank" rel="noreferrer">
+              <div className="row-title" style={{ fontSize: 13 }}>{r.items!.title}</div>
+              <div className="row-meta">{r.watches?.name}</div>
+            </a>
+          ))}
+        </div>
+        {recent.length === 0 && <p className="empty">Henüz bir şey yakalanmadı.</p>}
       </section>
     </main>
   );

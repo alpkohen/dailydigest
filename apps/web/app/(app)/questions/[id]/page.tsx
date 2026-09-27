@@ -28,38 +28,38 @@ export default async function QuestionDetailPage({ params }: { params: Promise<{
 
   return (
     <main>
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>{question.text}</h1>
-      <p style={{ fontSize: 12, color: "#888" }}>{question.active ? "aktif" : "pasif"}</p>
+      <h1 className="h1-serif">{question.text}</h1>
+      <span className={`badge ${question.active ? "badge-accent" : "badge-neutral"}`}>{question.active ? "aktif" : "pasif"}</span>
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 14 }}>Haftalık güncellemeler</h2>
+      <section className="section">
+        <h2 className="h2-section">Haftalık güncellemeler</h2>
         {(updateRows ?? []).map((u) => (
-          <div key={u.id} style={{ margin: "10px 0" }}>
-            <div style={{ fontSize: 11, color: "#888" }}>
+          <div key={u.id} style={{ margin: "14px 0" }}>
+            <div className="row-meta">
               {u.period_start} — {u.period_end}
             </div>
-            <p style={{ fontSize: 13, lineHeight: "20px" }}>{u.text}</p>
+            <p className="row-summary" style={{ marginTop: 4 }}>{u.text}</p>
           </div>
         ))}
-        {(updateRows ?? []).length === 0 && <p style={{ color: "#888", fontSize: 13 }}>Henüz haftalık güncelleme yok.</p>}
+        {(updateRows ?? []).length === 0 && <p className="empty">Henüz haftalık güncelleme yok.</p>}
       </section>
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 14 }}>Kanıt günlüğü ({evidence.length})</h2>
+      <section className="section">
+        <h2 className="h2-section">Kanıt günlüğü ({evidence.length})</h2>
         {evidence.map((e) => (
-          <div key={e.id} style={{ margin: "8px 0", borderBottom: "1px solid #f0f0f0", paddingBottom: 8 }}>
-            <div style={{ fontSize: 11, color: "#888" }}>
+          <div key={e.id} className="row-flex" style={{ display: "block" }}>
+            <div className="row-meta">
               {STANCE_LABELS[e.stance] ?? e.stance} · {new Date(e.created_at).toLocaleDateString("tr-TR")}
             </div>
-            <p style={{ fontSize: 13, margin: "2px 0" }}>{e.note}</p>
+            <p className="row-summary" style={{ marginTop: 4 }}>{e.note}</p>
             {e.stories && (
-              <Link href={`/story/${e.stories.id}`} style={{ fontSize: 12, color: "#666" }}>
+              <Link href={`/story/${e.stories.id}`} className="text-accent" style={{ fontSize: 12, textDecoration: "none" }}>
                 {e.stories.title}
               </Link>
             )}
           </div>
         ))}
-        {evidence.length === 0 && <p style={{ color: "#888", fontSize: 13 }}>Henüz kanıt yok.</p>}
+        {evidence.length === 0 && <p className="empty">Henüz kanıt yok.</p>}
       </section>
     </main>
   );

@@ -17,8 +17,8 @@ export default async function TodayPage() {
   if (!brief) {
     return (
       <main>
-        <h1 style={{ fontSize: 20 }}>Bugün</h1>
-        <p>Henüz bir brief oluşturulmadı.</p>
+        <h1 className="h1-serif">Günaydın, Evren.</h1>
+        <p className="empty">Henüz bir brief oluşturulmadı.</p>
       </main>
     );
   }

@@ -12,20 +12,18 @@ export default async function BriefsPage() {
 
   return (
     <main>
-      <h1 style={{ fontSize: 20 }}>Brief geçmişi</h1>
-      {(briefs ?? []).map((b) => (
-        <Link
-          key={b.id}
-          href={`/briefs/${b.id}`}
-          style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f0f0f0", color: "inherit", textDecoration: "none" }}
-        >
-          <span style={{ fontSize: 14 }}>
-            {b.period_date} · {KIND_LABELS[b.kind] ?? b.kind}
-          </span>
-          <span style={{ fontSize: 12, color: "#888" }}>{b.status}</span>
-        </Link>
-      ))}
-      {(briefs ?? []).length === 0 && <p style={{ color: "#888", fontSize: 14 }}>Henüz brief yok.</p>}
+      <h1 className="h1-serif">Brief geçmişi</h1>
+      <div className="link-list" style={{ marginTop: 20 }}>
+        {(briefs ?? []).map((b) => (
+          <Link key={b.id} href={`/briefs/${b.id}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="row-title" style={{ fontWeight: 400 }}>
+              {b.period_date} · {KIND_LABELS[b.kind] ?? b.kind}
+            </span>
+            <span className="badge badge-neutral">{b.status}</span>
+          </Link>
+        ))}
+      </div>
+      {(briefs ?? []).length === 0 && <p className="empty">Henüz brief yok.</p>}
     </main>
   );
 }

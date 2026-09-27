@@ -14,12 +14,12 @@ export default async function FeedbackConfirmedPage({
   const { ok, signal } = await searchParams;
 
   return (
-    <main style={{ fontFamily: "-apple-system, Helvetica, Arial, sans-serif", padding: "3rem 1.5rem", textAlign: "center" }}>
-      <h1 style={{ fontSize: 18 }}>dailydigest</h1>
+    <main style={{ padding: "80px 24px", textAlign: "center" }}>
+      <h1 className="h1-serif">World Brief.</h1>
       {ok === "true" ? (
-        <p>{(signal && SIGNAL_LABELS[signal]) ?? "Geri bildirimin kaydedildi."}</p>
+        <p className="dek" style={{ color: "var(--text)" }}>{(signal && SIGNAL_LABELS[signal]) ?? "Geri bildirimin kaydedildi."}</p>
       ) : (
-        <p>Bu link geçersiz veya süresi dolmuş.</p>
+        <p className="text-danger">Bu link geçersiz veya süresi dolmuş.</p>
       )}
     </main>
   );

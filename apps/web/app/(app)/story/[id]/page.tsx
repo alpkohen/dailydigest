@@ -39,74 +39,66 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main>
-      <p style={{ fontSize: 12, color: "#888" }}>Tier {story.tier ?? "?"}</p>
-      <h1 style={{ fontSize: 22, marginTop: 0 }}>{story.title}</h1>
+      <span className="badge badge-critical">Tier {story.tier ?? "?"}</span>
+      <h1 className="h1-serif" style={{ marginTop: 10 }}>{story.title}</h1>
 
-      {topics.length > 0 && (
-        <p style={{ fontSize: 12, color: "#666" }}>{topics.join(" · ")}</p>
-      )}
+      {topics.length > 0 && <p className="row-meta" style={{ fontSize: 12 }}>{topics.join(" · ")}</p>}
 
       <FeedbackButtons storyId={story.id} />
 
       {story.summary && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Özet</h2>
-          <p style={{ fontSize: 14, lineHeight: "21px" }}>{story.summary}</p>
+        <section className="section">
+          <h2 className="h2-section">Özet</h2>
+          <p className="dek" style={{ color: "var(--text)" }}>{story.summary}</p>
         </section>
       )}
 
       {story.what_changed && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Ne değişti</h2>
-          <p style={{ fontSize: 14, lineHeight: "21px" }}>{story.what_changed}</p>
+        <section className="section">
+          <h2 className="h2-section">Ne değişti</h2>
+          <p className="dek" style={{ color: "var(--text)" }}>{story.what_changed}</p>
         </section>
       )}
 
       {story.why_it_matters && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Neden önemli</h2>
-          <p style={{ fontSize: 14, lineHeight: "21px" }}>{story.why_it_matters}</p>
+        <section className="section">
+          <h2 className="h2-section">Neden önemli</h2>
+          <p className="dek" style={{ color: "var(--text)" }}>{story.why_it_matters}</p>
         </section>
       )}
 
       {story.watch_next && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Sırada ne var</h2>
-          <p style={{ fontSize: 14, lineHeight: "21px" }}>{story.watch_next}</p>
+        <section className="section">
+          <h2 className="h2-section">Sırada ne var</h2>
+          <p className="dek" style={{ color: "var(--text)" }}>{story.watch_next}</p>
         </section>
       )}
 
       {entities.length > 0 && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Öne çıkan isimler / kurumlar</h2>
-          <p style={{ fontSize: 13, color: "#444" }}>{entities.join(", ")}</p>
+        <section className="section">
+          <h2 className="h2-section">Öne çıkan isimler / kurumlar</h2>
+          <p className="row-summary">{entities.join(", ")}</p>
         </section>
       )}
 
       {perspectiveGroupCount >= 2 && framing.length > 0 && (
-        <section style={{ margin: "16px 0" }}>
-          <h2 style={{ fontSize: 15 }}>Perspektif karşılaştırması</h2>
+        <section className="section">
+          <h2 className="h2-section">Perspektif karşılaştırması</h2>
           {framing.map((f) => (
-            <div key={f.perspective_group} style={{ margin: "8px 0" }}>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{f.perspective_group}</div>
-              <div style={{ fontSize: 13, color: "#444" }}>{f.summary}</div>
+            <div key={f.perspective_group} style={{ margin: "12px 0" }}>
+              <div className="row-title">{f.perspective_group}</div>
+              <div className="row-summary">{f.summary}</div>
             </div>
           ))}
         </section>
       )}
 
-      <section style={{ margin: "16px 0" }}>
-        <h2 style={{ fontSize: 15 }}>Kaynaklar ({items.length})</h2>
+      <section className="section">
+        <h2 className="h2-section">Kaynaklar ({items.length})</h2>
         {items.map((item, i) => (
-          <a
-            key={i}
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "block", padding: "8px 0", borderBottom: "1px solid #f0f0f0", color: "inherit", textDecoration: "none" }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{item.title}</div>
-            <div style={{ fontSize: 11, color: "#888" }}>
+          <a key={i} href={item.url} target="_blank" rel="noreferrer" className="row-link">
+            <div className="row-title">{item.title}</div>
+            <div className="row-meta">
               {item.sources?.name ?? "?"}
               {item.sources?.perspective_groups?.name ? ` · ${item.sources.perspective_groups.name}` : ""}
               {item.language ? ` · ${item.language}` : ""}

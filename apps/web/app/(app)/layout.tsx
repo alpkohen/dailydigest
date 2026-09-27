@@ -5,7 +5,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <Nav />
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "20px" }}>{children}</div>
+      <div className="page">{children}</div>
     </>
   );
 }

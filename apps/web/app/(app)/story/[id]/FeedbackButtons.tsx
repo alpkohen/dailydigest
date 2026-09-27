@@ -15,7 +15,7 @@ export function FeedbackButtons({ storyId }: { storyId: string }) {
   const [sent, setSent] = useState<string | null>(null);
 
   return (
-    <div style={{ display: "flex", gap: 8, margin: "16px 0", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 8, margin: "18px 0", flexWrap: "wrap" }}>
       {SIGNALS.map(({ signal, label }) => (
         <button
           key={signal}
@@ -26,13 +26,7 @@ export function FeedbackButtons({ storyId }: { storyId: string }) {
               setSent(signal);
             })
           }
-          style={{
-            fontSize: 12,
-            padding: "5px 10px",
-            background: sent === signal ? "#e6f4ea" : "#f4f4f4",
-            border: "1px solid #ddd",
-            borderRadius: 4,
-          }}
+          className={`btn btn-sm${sent === signal ? " btn-primary" : ""}`}
         >
           {label}
         </button>
