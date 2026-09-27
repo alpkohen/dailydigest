@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Turborepo / monorepo caches
+.turbo/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Netlify
+.netlify/
+
+# Supabase local
+.branches/
+.temp/
+supabase/.temp/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Misc
+*.pem
+.cache/
