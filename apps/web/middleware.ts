@@ -30,6 +30,13 @@ export async function middleware(request: NextRequest) {
     },
   );
 
+  // /auth/callback is the route that EXCHANGES the magic-link code for a
+  // session, so no session exists yet when this request arrives — it must
+  // be allowed through untouched, or the exchange never runs and every
+  // sign-in bounces straight back to /login.
+  const isAuthCallbackRoute = request.nextUrl.pathname.startsWith("/auth/callback");
+  if (isAuthCallbackRoute) return response;
+
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
