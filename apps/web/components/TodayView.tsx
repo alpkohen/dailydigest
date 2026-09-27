@@ -126,7 +126,6 @@ export function TodayView({
   outsideRadar,
   watchlist,
   questionWidget,
-  briefTime,
   savedStoryIds,
   savedItemIds,
 }: {
@@ -137,7 +136,6 @@ export function TodayView({
   outsideRadar?: TodayOutsideRadar | null;
   watchlist?: TodayWatchlistItem[];
   questionWidget?: TodayQuestionWidget | null;
-  briefTime?: string;
   savedStoryIds: string[];
   savedItemIds: string[];
 }) {
@@ -177,7 +175,7 @@ export function TodayView({
         </span>
         <span className="top-meta-status">
           <span className="status-dot" />
-          Today&apos;s edition · {briefTime ?? "07:00"}
+          Today&apos;s edition
         </span>
       </div>
 
@@ -195,18 +193,8 @@ export function TodayView({
             </div>
           </div>
 
-          <hr className="hr" />
-
-          <section>
-            <h2 className="h2-section framing-heading">
-              <IconFrame className="framing-icon" />
-              Today&apos;s Framing
-            </h2>
-            <p className="dek" lang="tr">{headline}</p>
-          </section>
-
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div className="tab-nav">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 20 }}>
+            <div className="tab-nav" style={{ marginTop: 0 }}>
               {TABS.map((t) => (
                 <button key={t.key} className={`tab-item${tab === t.key ? " active" : ""}`} onClick={() => setTab(t.key)}>
                   {t.label}
@@ -224,6 +212,16 @@ export function TodayView({
               </select>
             )}
           </div>
+
+          <hr className="hr" />
+
+          <section>
+            <h2 className="h2-section framing-heading">
+              <IconFrame className="framing-icon" />
+              Today&apos;s Framing
+            </h2>
+            <p className="dek" lang="tr">{headline}</p>
+          </section>
 
           <div>
             {leadStory && (

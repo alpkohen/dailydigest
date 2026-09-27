@@ -30,7 +30,6 @@ export interface TodayViewProps {
   outsideRadar: TodayOutsideRadar | null;
   watchlist: TodayWatchlistItem[];
   questionWidget: TodayQuestionWidget | null;
-  briefTime?: string;
   savedStoryIds: string[];
   savedItemIds: string[];
 }
@@ -129,7 +128,6 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
   const { data: userData } = await supabase.auth.getUser();
   let savedStoryIds: string[] = [];
   let savedItemIds: string[] = [];
-  let briefTime: string | undefined;
 
   if (userData.user) {
     const { data: savedRows } = await supabase
@@ -138,13 +136,6 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
       .eq("owner_id", userData.user.id);
     savedStoryIds = (savedRows ?? []).map((r: { story_id: string | null }) => r.story_id).filter((v: string | null): v is string => Boolean(v));
     savedItemIds = (savedRows ?? []).map((r: { item_id: string | null }) => r.item_id).filter((v: string | null): v is string => Boolean(v));
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("brief_time")
-      .eq("owner_id", userData.user.id)
-      .maybeSingle();
-    briefTime = profile?.brief_time?.slice(0, 5);
   }
 
   return {
@@ -155,7 +146,6 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
     outsideRadar,
     watchlist: content?.watchlist ?? [],
     questionWidget,
-    briefTime,
     savedStoryIds,
     savedItemIds,
   };
