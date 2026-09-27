@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { SourceForm } from "./SourceForm";
 import { SourceRow } from "./SourceRow";
 
 export default async function SourcesPage() {
@@ -7,6 +8,8 @@ export default async function SourcesPage() {
     .from("sources")
     .select("id, name, type, weight, health_status, active, perspective_groups(name)")
     .order("name");
+
+  const { data: perspectiveGroups } = await supabase.from("perspective_groups").select("id, name").order("name");
 
   type Row = {
     id: string;
@@ -21,6 +24,9 @@ export default async function SourcesPage() {
   return (
     <main>
       <h1 className="h1-serif">Sources</h1>
+      <div style={{ marginTop: 16 }}>
+        <SourceForm perspectiveGroups={perspectiveGroups ?? []} />
+      </div>
       {((sources ?? []) as unknown as Row[]).map((s) => (
         <SourceRow
           key={s.id}
