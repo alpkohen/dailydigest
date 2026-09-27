@@ -32,6 +32,7 @@ export const limitsConfigSchema = z.object({
   max_items_per_source_per_run: z.number().int().positive(),
   thresholds: z.object({
     relevance_default: z.number().min(0).max(10),
+    relevance_prefilter_cosine: z.number().min(-1).max(1),
     cluster_high: z.number().min(0).max(1),
     cluster_low: z.number().min(0).max(1),
     dedup_simhash_distance: z.number().int().min(0),

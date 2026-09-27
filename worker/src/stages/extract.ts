@@ -4,12 +4,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { JSDOM } from "jsdom";
 import type { Env } from "../env.js";
 import { claimJobs, completeJob, enqueueJobs, failJob, type JobRow } from "../jobs.js";
-import { computeSimhash, textHash } from "../lib/hash.js";
+import { computeSimhash, textHash, weightedSimhashInput } from "../lib/hash.js";
 import { detectLanguage } from "../lib/language.js";
 
 const CLAIM_BATCH_SIZE = 5;
 const ITEMS_PER_JOB = 20;
 const FETCH_TIMEOUT_MS = 15_000;
+// No real article is this long; anything past it is almost certainly a
+// parsing failure on non-article content, so it's dropped rather than
+// stored (defense in depth alongside the content-type check above).
+const MAX_TEXT_LENGTH = 100_000;
 
 interface ItemRow {
   id: string;
@@ -28,6 +32,13 @@ async function fetchHtml(url: string): Promise<string> {
       headers: { "User-Agent": "Mozilla/5.0 (dailydigest personal use)" },
     });
     if (!response.ok) throw new Error(`fetch failed: ${response.status} ${response.statusText}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("html") && !contentType.includes("xml") && contentType !== "") {
+      // Readability/JSDOM only make sense for markup; feeding them a PDF or
+      // other binary produces enormous, meaningless "text" (seen in
+      // practice: multi-megabyte garbage from PDF responses).
+      throw new Error(`not HTML (content-type: ${contentType})`);
+    }
     return await response.text();
   } finally {
     clearTimeout(timeout);
@@ -50,7 +61,8 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
     const html = await fetchHtml(item.url);
     const dom = new JSDOM(html, { url: item.url });
     const article = new Readability(dom.window.document).parse();
-    text = article?.textContent?.trim() || null;
+    const extracted = article?.textContent?.trim() || null;
+    text = extracted && extracted.length <= MAX_TEXT_LENGTH ? extracted : null;
   } catch (err) {
     console.warn(`extract: could not fetch/parse ${item.url}: ${(err as Error).message}`);
   }
@@ -63,7 +75,7 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
       text,
       language,
       text_hash: text ? textHash(text) : null,
-      simhash: text ? computeSimhash(text) : null,
+      simhash: text ? computeSimhash(weightedSimhashInput(item.title, text)) : null,
       status: "extracted",
     })
     .eq("id", item.id);
@@ -87,6 +99,7 @@ export async function runExtractStage(env: Env, date: string): Promise<void> {
     const { data, error } = await db
       .from("items")
       .select("id")
+      .eq("owner_id", env.OWNER_ID)
       .eq("status", "new")
       .is("canonical_item_id", null)
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
@@ -119,6 +132,7 @@ export async function runExtractStage(env: Env, date: string): Promise<void> {
         const { data: items, error } = await db
           .from("items")
           .select("id, url, title, paywalled, language")
+          .eq("owner_id", env.OWNER_ID)
           .in("id", itemIds);
         if (error) throw new Error(error.message);
 

@@ -8,6 +8,10 @@ max_items_per_source_per_run: 100
 
 thresholds:
   relevance_default: 5.0
+  # Embedding cosine pre-filter before the relevance LLM call runs at all
+  # (SPEC.md section 6, stage 5: "avoid scoring everything against
+  # everything"). Below this, an item/topic pair is skipped entirely.
+  relevance_prefilter_cosine: 0.2
   cluster_high: 0.90
   cluster_low: 0.75
   dedup_simhash_distance: 3

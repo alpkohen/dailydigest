@@ -36,6 +36,9 @@ prices_per_million_tokens:
   gpt-6-astra:
     input: 10.00
     output: 50.00
+  text-embedding-3-large:
+    input: 0.13
+    output: 0
 
 fallbacks:
   strong:

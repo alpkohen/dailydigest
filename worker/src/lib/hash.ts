@@ -52,6 +52,19 @@ export function computeSimhash(text: string): string {
   return signed.toString();
 }
 
+// Some sites' Readability extraction returns boilerplate (cookie notices,
+// "in the news" widgets) that is near-identical across every article on
+// that site, which would otherwise make a text-only simhash false-match
+// unrelated articles as near-duplicates. Repeating the title gives it
+// outsized weight in the token-frequency hash, and genuine wire-copy
+// duplicates (SPEC.md section 6, stage 4) also tend to share the same or a
+// very similar headline, so this doesn't cost real matches.
+const TITLE_REPETITIONS = 25;
+
+export function weightedSimhashInput(title: string, text: string): string {
+  return `${Array(TITLE_REPETITIONS).fill(title).join("\n")}\n\n${text}`;
+}
+
 export function hammingDistance(a: string, b: string): number {
   const toUnsigned = (v: string) => {
     const n = BigInt(v);

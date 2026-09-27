@@ -19,6 +19,7 @@ interface SourceRow {
   url_or_query: string | null;
   language: string | null;
   last_fetched_at: string | null;
+  paywalled: boolean;
 }
 
 /**
@@ -127,6 +128,7 @@ async function processRssJob(db: SupabaseClient, env: Env, limits: LimitsConfig,
       author: item.author,
       publishedAt: item.publishedAt,
       language: source.language,
+      paywalled: source.paywalled,
     })),
     limits.max_items_per_source_per_run,
   );
@@ -227,7 +229,8 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
 
   const { data: sources, error: sourcesError } = await db
     .from("sources")
-    .select("id, name, type, url_or_query, language, last_fetched_at")
+    .select("id, name, type, url_or_query, language, last_fetched_at, paywalled")
+    .eq("owner_id", env.OWNER_ID)
     .eq("active", true)
     .in("type", ["rss", "api_openalex", "api_exa", "api_gdelt"]);
   if (sourcesError) throw new Error(`Failed to load sources: ${sourcesError.message}`);
@@ -235,6 +238,7 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
   const { data: topics, error: topicsError } = await db
     .from("topics")
     .select("id, queries_en")
+    .eq("owner_id", env.OWNER_ID)
     .eq("active", true);
   if (topicsError) throw new Error(`Failed to load topics: ${topicsError.message}`);
 

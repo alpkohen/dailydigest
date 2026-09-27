@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSimhash, hammingDistance, textHash } from "../lib/hash.js";
+import { computeSimhash, hammingDistance, textHash, weightedSimhashInput } from "../lib/hash.js";
 
 describe("textHash", () => {
   it("is deterministic", () => {
@@ -38,5 +38,29 @@ describe("computeSimhash + hammingDistance", () => {
   it("hammingDistance of a hash with itself is 0", () => {
     const h = computeSimhash(wireStory);
     expect(hammingDistance(h, h)).toBe(0);
+  });
+});
+
+describe("weightedSimhashInput", () => {
+  // A realistic single-pass boilerplate block (not literally repeated
+  // sentences, which would be an unrealistically extreme edge case) —
+  // modelled on a real extraction failure this fix was written for: a
+  // site's cookie/privacy notice returned instead of the article body.
+  const boilerplate =
+    "This site uses cookies to improve your experience and analyze traffic. By continuing to browse you accept our privacy " +
+    "policy and terms of service. Subscribe to our newsletter for daily updates on politics, economy and world affairs. " +
+    "Your personal data is processed in accordance with applicable data protection regulations and may be shared with " +
+    "our advertising partners unless you opt out through your account settings page at any time before your next visit.";
+
+  it("does not false-match unrelated articles that share identical extraction boilerplate", () => {
+    const a = computeSimhash(weightedSimhashInput("Turkey and Greece resume Aegean talks", boilerplate));
+    const b = computeSimhash(weightedSimhashInput("Local election results announced in Ankara", boilerplate));
+    expect(hammingDistance(a, b)).toBeGreaterThan(3);
+  });
+
+  it("still matches genuine wire-copy duplicates that share both title and body", () => {
+    const a = computeSimhash(weightedSimhashInput("Central bank raises rates by 50bps", "The central bank raised interest rates today citing inflation."));
+    const b = computeSimhash(weightedSimhashInput("Central bank raises rates by 50bps", "The central bank raised interest rates today, citing inflation."));
+    expect(hammingDistance(a, b)).toBeLessThanOrEqual(8);
   });
 });

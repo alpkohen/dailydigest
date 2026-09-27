@@ -1,23 +1,36 @@
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
+import { runCreateTopicStage } from "./stages/createTopic.js";
+import { runDedupStage } from "./stages/dedup.js";
+import { runEmbedStage } from "./stages/embed.js";
 import { runExtractStage } from "./stages/extract.js";
 import { runIngestStage } from "./stages/ingest.js";
 import { runPingStage } from "./stages/ping.js";
+import { runRelevanceStage } from "./stages/relevance.js";
 import { runSeedSourcesStage } from "./stages/seedSources.js";
 
 type WorkerConfig = Awaited<ReturnType<typeof loadWorkerConfig>>;
-type Stage = (env: Env, config: WorkerConfig, date: string) => Promise<void>;
+type Stage = (env: Env, config: WorkerConfig, date: string, args: Map<string, string>) => Promise<void>;
 
 const STAGES: Record<string, Stage> = {
   ping: (env, config, date) => runPingStage(env, config.models, date),
   seed_sources: (env, config) => runSeedSourcesStage(env, config.sourcesSeed),
   ingest: (env, config, date) => runIngestStage(env, config.limits, date),
   extract: (env, _config, date) => runExtractStage(env, date),
+  embed: (env, config, date) => runEmbedStage(env, config.models, date),
+  dedup: (env, config, date) => runDedupStage(env, config.limits, date),
+  relevance: (env, config, date) => runRelevanceStage(env, config.models, config.limits, date),
+  create_topic: (env, config, _date, args) => {
+    const sentence = args.get("topic");
+    if (!sentence) throw new Error('create_topic requires --topic="<one sentence>"');
+    return runCreateTopicStage(env, config.models, config.limits, sentence);
+  },
 };
 
-// Order matters for --all: sources must exist before ingest can read them,
-// and items must exist before extract can process them.
-const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract"];
+// Order matters for --all: sources before ingest, items before
+// extract/embed/dedup/relevance. create_topic is deliberately excluded from
+// --all since it needs a --topic argument and is a one-off owner action.
+const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract", "embed", "dedup", "relevance"];
 
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();
@@ -55,7 +68,7 @@ async function main() {
       process.exit(1);
     }
     console.log(`--- running stage "${name}" for ${date} ---`);
-    await run(env, config, date);
+    await run(env, config, date, args);
   }
 }
 
