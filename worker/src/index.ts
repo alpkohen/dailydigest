@@ -2,6 +2,7 @@ import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
 import { runClusterStage } from "./stages/cluster.js";
 import { runComposeBriefStage } from "./stages/composeBrief.js";
+import { runCreateQuestionStage } from "./stages/createQuestion.js";
 import { runCreateTopicStage } from "./stages/createTopic.js";
 import { runDedupStage } from "./stages/dedup.js";
 import { runDeliverStage } from "./stages/deliver.js";
@@ -11,10 +12,13 @@ import { runExtractStage } from "./stages/extract.js";
 import { runIngestStage } from "./stages/ingest.js";
 import { runLearnStage } from "./stages/learn.js";
 import { runPingStage } from "./stages/ping.js";
+import { runQuestionEvidenceStage } from "./stages/questionEvidence.js";
+import { runQuestionUpdateStage } from "./stages/questionUpdate.js";
 import { runRelevanceStage } from "./stages/relevance.js";
 import { runResearchSummaryStage } from "./stages/researchSummary.js";
 import { runScoreStage } from "./stages/score.js";
 import { runSeedSourcesStage } from "./stages/seedSources.js";
+import { runWatchIngestStage } from "./stages/watchIngest.js";
 
 type WorkerConfig = Awaited<ReturnType<typeof loadWorkerConfig>>;
 type Stage = (env: Env, config: WorkerConfig, date: string, args: Map<string, string>) => Promise<void>;
@@ -23,6 +27,7 @@ const STAGES: Record<string, Stage> = {
   ping: (env, config, date) => runPingStage(env, config.models, date),
   seed_sources: (env, config) => runSeedSourcesStage(env, config.sourcesSeed),
   ingest: (env, config, date) => runIngestStage(env, config.limits, date),
+  watch_ingest: (env, config, date) => runWatchIngestStage(env, config.limits, date),
   extract: (env, _config, date) => runExtractStage(env, date),
   embed: (env, config, date) => runEmbedStage(env, config.models, date),
   dedup: (env, config, date) => runDedupStage(env, config.limits, date),
@@ -31,24 +36,34 @@ const STAGES: Record<string, Stage> = {
   score: (env, config, date) => runScoreStage(env, config.models, date),
   enrich: (env, config, date) => runEnrichStage(env, config.models, date),
   research_summary: (env, config, date) => runResearchSummaryStage(env, config.models, date),
+  question_evidence: (env, config, date) => runQuestionEvidenceStage(env, config.models, date),
   compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, date),
   deliver: (env, _config, date) => runDeliverStage(env, date),
   learn: (env, _config, date) => runLearnStage(env, date),
+  // Weekly, not part of --all (SPEC.md section 4.2; wired to a cron in M9).
+  question_update: (env, config, date) => runQuestionUpdateStage(env, config.models, date),
   create_topic: (env, config, _date, args) => {
     const sentence = args.get("topic");
     if (!sentence) throw new Error('create_topic requires --topic="<one sentence>"');
     return runCreateTopicStage(env, config.models, config.limits, sentence);
   },
+  create_question: (env, config, _date, args) => {
+    const text = args.get("question");
+    if (!text) throw new Error('create_question requires --question="<text>"');
+    return runCreateQuestionStage(env, config.models, text);
+  },
 };
 
 // Order matters for --all: sources before ingest, items before
 // extract/embed/dedup/relevance/cluster, stories before score/enrich,
-// enrich before compose_brief. create_topic is deliberately excluded from
-// --all since it needs a --topic argument and is a one-off owner action.
+// enrich before question_evidence/compose_brief. create_topic,
+// create_question and question_update are one-off/weekly actions,
+// deliberately excluded from --all.
 const ALL_STAGE_ORDER = [
   "seed_sources",
   "learn",
   "ingest",
+  "watch_ingest",
   "extract",
   "embed",
   "dedup",
@@ -57,6 +72,7 @@ const ALL_STAGE_ORDER = [
   "score",
   "enrich",
   "research_summary",
+  "question_evidence",
   "compose_brief",
   "deliver",
 ];

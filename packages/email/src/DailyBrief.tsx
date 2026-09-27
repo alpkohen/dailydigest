@@ -16,6 +16,8 @@ export interface BriefSectionItem {
 export interface BriefContent {
   headline: string;
   sections: { section: "critical" | "follow_up" | "worth_reading" | "new_research"; items: BriefSectionItem[] }[];
+  outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string } | null;
+  watchlist?: { id: string; title: string; url: string; watchName: string }[];
 }
 
 const SECTION_TITLES: Record<BriefContent["sections"][number]["section"], string> = {
@@ -82,6 +84,33 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                 <Hr style={{ borderColor: "#eeeeee" }} />
               </Section>
             ))}
+
+          {content.watchlist && content.watchlist.length > 0 && (
+            <Section style={{ margin: "20px 0" }}>
+              <Heading as="h2" style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>
+                Takip listenden
+              </Heading>
+              {content.watchlist.map((w) => (
+                <Text key={w.id} style={{ fontSize: 13, margin: "6px 0" }}>
+                  <a href={w.url} style={{ color: "#1a1a1a" }}>
+                    {w.title}
+                  </a>
+                  <span style={{ color: "#999", fontSize: 11 }}> — {w.watchName}</span>
+                </Text>
+              ))}
+              <Hr style={{ borderColor: "#eeeeee" }} />
+            </Section>
+          )}
+
+          {content.outsideRadar && (
+            <Section style={{ margin: "20px 0" }}>
+              <Heading as="h2" style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>
+                Radarının dışında
+              </Heading>
+              <Text style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{content.outsideRadar.title}</Text>
+              <Text style={{ fontSize: 13, color: "#333", margin: 0 }}>{content.outsideRadar.reason}</Text>
+            </Section>
+          )}
 
           <Text style={{ fontSize: 11, color: "#999999", marginTop: 24 }}>dailydigest, kişisel dış politika istihbarat masası.</Text>
         </Container>

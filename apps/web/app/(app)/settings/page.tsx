@@ -8,7 +8,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("language, timezone, brief_time, quiet_hours, daily_budget_usd")
+    .select("language, timezone, brief_time, quiet_hours, daily_budget_usd, interest_profile")
     .eq("owner_id", userData.user?.id ?? "")
     .maybeSingle();
 
@@ -25,6 +25,7 @@ export default async function SettingsPage() {
         quietStart={quietHours.start}
         quietEnd={quietHours.end}
         dailyBudgetUsd={profile?.daily_budget_usd ?? limits.daily_budget_usd}
+        interestProfile={profile?.interest_profile ?? ""}
       />
 
       <section style={{ marginTop: 32 }}>

@@ -1,7 +1,71 @@
 import { createServiceRoleClient, type ModelsConfig } from "@dailydigest/db";
-import { briefComposeSchema, buildBriefComposePrompt, callLlm } from "@dailydigest/llm";
+import { briefComposeSchema, buildBriefComposePrompt, buildOutsideRadarPrompt, callLlm, outsideRadarSchema } from "@dailydigest/llm";
 import type { Env } from "../env.js";
 import { validateBrief } from "../lib/briefValidator.js";
+
+interface OutsideRadarPick {
+  id: string;
+  title: string;
+  standfirst: string | null;
+  reason: string;
+}
+
+async function pickOutsideRadar(
+  env: Env,
+  models: ModelsConfig,
+  db: ReturnType<typeof createServiceRoleClient>,
+  runId: string,
+): Promise<OutsideRadarPick | null> {
+  const { data: profile } = await db.from("profiles").select("interest_profile").eq("owner_id", env.OWNER_ID).maybeSingle();
+
+  const { data: candidates } = await db
+    .from("items")
+    .select("id, title, standfirst")
+    .eq("owner_id", env.OWNER_ID)
+    .eq("status", "not_relevant")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (!candidates || candidates.length === 0) return null;
+
+  try {
+    const result = await callLlm({
+      role: "mid",
+      promptName: "outside_radar",
+      prompt: buildOutsideRadarPrompt({ interestProfile: profile?.interest_profile ?? null, candidates }),
+      schema: outsideRadarSchema,
+      modelsConfig: models,
+      apiKeys: { anthropic: env.ANTHROPIC_API_KEY, openai: env.OPENAI_API_KEY },
+      db,
+      ownerId: env.OWNER_ID,
+      runId,
+      stage: "outside_radar",
+      maxTokens: 256,
+    });
+    if (!result.pick_id) return null;
+    const picked = candidates.find((c) => c.id === result.pick_id);
+    if (!picked) return null;
+    return { id: picked.id, title: picked.title, standfirst: picked.standfirst, reason: result.reason };
+  } catch (err) {
+    console.error(`compose_brief: outside_radar failed: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+async function fetchWatchlistItems(
+  env: Env,
+  db: ReturnType<typeof createServiceRoleClient>,
+): Promise<{ id: string; title: string; url: string; watchName: string }[]> {
+  const { data: rows } = await db
+    .from("watch_items")
+    .select("watches(name), items(id, title, url)")
+    .eq("owner_id", env.OWNER_ID)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return ((rows ?? []) as unknown as { watches: { name: string } | null; items: { id: string; title: string; url: string } | null }[])
+    .filter((r) => r.items)
+    .map((r) => ({ id: r.items!.id, title: r.items!.title, url: r.items!.url, watchName: r.watches?.name ?? "?" }));
+}
 
 interface StoryRow {
   id: string;
@@ -112,6 +176,9 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const storyById = new Map(stories.map((s) => [s.id, s]));
   const researchById = new Map(researchItems.map((r) => [r.id, r]));
+  const outsideRadar = await pickOutsideRadar(env, models, db, run.id);
+  const watchlist = await fetchWatchlistItems(env, db);
+
   const content = {
     headline: composed.headline,
     sections: composed.sections.map((section) => ({
@@ -121,6 +188,8 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
           ? section.story_ids.map((id) => ({ id, title: researchById.get(id)?.items?.title, argument: researchById.get(id)?.argument }))
           : section.story_ids.map((id) => ({ id, title: storyById.get(id)?.title, summary: storyById.get(id)?.summary })),
     })),
+    outsideRadar,
+    watchlist,
   };
 
   const { data: brief, error: briefError } = await db

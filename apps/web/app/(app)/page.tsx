@@ -51,7 +51,12 @@ export default async function TodayPage() {
       topics: row.stories!.story_topics.map((st) => st.topics?.name).filter((n): n is string => Boolean(n)),
     }));
 
-  const content = brief.content as { headline: string; sections: { section: string; items: { id: string; title?: string; argument?: string }[] }[] } | null;
+  const content = brief.content as {
+    headline: string;
+    sections: { section: string; items: { id: string; title?: string; argument?: string }[] }[];
+    outsideRadar?: { title: string; reason: string } | null;
+    watchlist?: { id: string; title: string; url: string; watchName: string }[];
+  } | null;
   const research: TodayResearchItem[] =
     content?.sections.find((s) => s.section === "new_research")?.items.map((i) => ({
       id: i.id,
@@ -59,5 +64,14 @@ export default async function TodayPage() {
       argument: i.argument ?? "",
     })) ?? [];
 
-  return <TodayView periodDate={brief.period_date} headline={content?.headline ?? ""} stories={stories} research={research} />;
+  return (
+    <TodayView
+      periodDate={brief.period_date}
+      headline={content?.headline ?? ""}
+      stories={stories}
+      research={research}
+      outsideRadar={content?.outsideRadar}
+      watchlist={content?.watchlist}
+    />
+  );
 }

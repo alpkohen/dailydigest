@@ -14,6 +14,7 @@ export async function saveSettingsAction(formData: FormData): Promise<{ error?: 
   const quietStart = String(formData.get("quiet_start") ?? "23:00");
   const quietEnd = String(formData.get("quiet_end") ?? "07:00");
   const dailyBudget = Number(formData.get("daily_budget_usd") ?? 5);
+  const interestProfile = String(formData.get("interest_profile") ?? "").trim() || null;
 
   const { error } = await supabase.from("profiles").upsert(
     {
@@ -23,6 +24,7 @@ export async function saveSettingsAction(formData: FormData): Promise<{ error?: 
       brief_time: briefTime,
       quiet_hours: { start: quietStart, end: quietEnd },
       daily_budget_usd: dailyBudget,
+      interest_profile: interestProfile,
     },
     { onConflict: "owner_id" },
   );

@@ -18,6 +18,18 @@ export interface TodayResearchItem {
   argument: string;
 }
 
+export interface TodayOutsideRadar {
+  title: string;
+  reason: string;
+}
+
+export interface TodayWatchlistItem {
+  id: string;
+  title: string;
+  url: string;
+  watchName: string;
+}
+
 const SECTION_LABELS: Record<string, string> = {
   critical: "Kritik gelişmeler",
   follow_up: "Takip edilen gelişmeler",
@@ -29,11 +41,15 @@ export function TodayView({
   headline,
   stories,
   research,
+  outsideRadar,
+  watchlist,
 }: {
   periodDate: string;
   headline: string;
   stories: TodayStory[];
   research: TodayResearchItem[];
+  outsideRadar?: TodayOutsideRadar | null;
+  watchlist?: TodayWatchlistItem[];
 }) {
   const [tierFilter, setTierFilter] = useState<number | "all">("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
@@ -102,6 +118,26 @@ export function TodayView({
               <div style={{ fontSize: 13, color: "#444" }}>{r.argument}</div>
             </div>
           ))}
+        </section>
+      )}
+
+      {watchlist && watchlist.length > 0 && (
+        <section style={{ margin: "20px 0" }}>
+          <h2 style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>Takip listenden</h2>
+          {watchlist.map((w) => (
+            <a key={w.id} href={w.url} target="_blank" rel="noreferrer" style={{ display: "block", padding: "6px 0", color: "inherit", textDecoration: "none" }}>
+              <span style={{ fontSize: 13 }}>{w.title}</span>
+              <span style={{ fontSize: 11, color: "#999" }}> — {w.watchName}</span>
+            </a>
+          ))}
+        </section>
+      )}
+
+      {outsideRadar && (
+        <section style={{ margin: "20px 0" }}>
+          <h2 style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>Radarının dışında</h2>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{outsideRadar.title}</div>
+          <div style={{ fontSize: 13, color: "#444" }}>{outsideRadar.reason}</div>
         </section>
       )}
     </main>

@@ -10,6 +10,7 @@ export function SettingsForm({
   quietStart,
   quietEnd,
   dailyBudgetUsd,
+  interestProfile,
 }: {
   language: string;
   timezone: string;
@@ -17,6 +18,7 @@ export function SettingsForm({
   quietStart: string;
   quietEnd: string;
   dailyBudgetUsd: number;
+  interestProfile: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -61,6 +63,10 @@ export function SettingsForm({
       <label>
         Günlük LLM bütçesi (USD)
         <input name="daily_budget_usd" type="number" step="0.5" min="0" defaultValue={dailyBudgetUsd} style={{ display: "block", width: "100%", padding: 6 }} />
+      </label>
+      <label>
+        İlgi profili (outside radar seçimini yönlendirir)
+        <textarea name="interest_profile" defaultValue={interestProfile} rows={3} style={{ display: "block", width: "100%", padding: 6 }} />
       </label>
       <button type="submit" disabled={pending} style={{ justifySelf: "start" }}>
         {pending ? "Kaydediliyor..." : "Kaydet"}

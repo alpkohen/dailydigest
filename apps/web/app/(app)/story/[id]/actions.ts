@@ -15,5 +15,15 @@ export async function submitStoryFeedbackAction(storyId: string, signal: string)
     signal,
     context: "app",
   });
+
+  // SPEC.md section 4.13: "saved" feedback also lands on the reading list.
+  if (signal === "saved") {
+    await supabase.from("reading_list").upsert(
+      { owner_id: userData.user.id, story_id: storyId, tags: [] },
+      { onConflict: "owner_id,story_id" },
+    );
+  }
+
   revalidatePath(`/story/${storyId}`);
+  revalidatePath("/reading-list");
 }
