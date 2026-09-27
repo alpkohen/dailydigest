@@ -19,7 +19,9 @@ export default function LoginPage() {
 
   return (
     <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-      <h1 className="h1-serif">World Brief.</h1>
+      <h1 className="h1-serif">
+        <span className="text-accent">World</span> Brief<span className="text-accent">.</span>
+      </h1>
       <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
         <label className="field">
           <span className="field-label">Email</span>

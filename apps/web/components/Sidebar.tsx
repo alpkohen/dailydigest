@@ -37,7 +37,9 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
     <aside className="sidebar">
       <div className="sidebar-logo-row">
         <span className="sidebar-logo-icon">W</span>
-        <span className="sidebar-logo-text">World Brief.</span>
+        <span className="sidebar-logo-text">
+          <span className="text-accent">World</span> Brief<span className="text-accent">.</span>
+        </span>
       </div>
 
       <p className="sidebar-eyebrow">Your desk</p>
