@@ -1,0 +1,103 @@
+# Initial source registry.
+# Feed URLs are intentionally left as TODO: Claude Code must find and verify
+# each feed during milestone 1 (fetch, check recent items, record health).
+# Perspective group assignments are a starting point for the owner to review.
+
+perspective_groups:
+  - id: tr_gov_aligned
+    name: "TR hükümete yakın"
+  - id: tr_opposition_independent
+    name: "TR muhalif / bağımsız"
+  - id: tr_foreign_public
+    name: "Yabancı kamu yayıncılarının Türkçe servisleri"
+  - id: western
+    name: "Batı medyası ve düşünce kuruluşları"
+  - id: regional
+    name: "Bölgesel (Orta Doğu, Kafkasya, Balkanlar)"
+  - id: other_state
+    name: "Diğer devlet medyası (Rusya, Çin vb.)"
+  - id: academic
+    name: "Akademik"
+
+sources:
+  # Turkish news
+  - { name: "Anadolu Ajansı", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.8 }
+  - { name: "Sabah", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.6 }
+  - { name: "Daily Sabah", type: rss, lang: en, group: tr_gov_aligned, weight: 0.6 }
+  - { name: "Yeni Şafak", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.5 }
+  - { name: "TRT Haber", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.6 }
+  - { name: "Hürriyet", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.6 }
+  - { name: "T24", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7 }
+  - { name: "Medyascope", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7 }
+  - { name: "Gazete Oksijen", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7 }
+  - { name: "Cumhuriyet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6 }
+  - { name: "Serbestiyet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6 }
+  - { name: "Karar", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6 }
+  - { name: "BBC Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.8 }
+  - { name: "DW Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.8 }
+  - { name: "Euronews Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.6 }
+  - { name: "Independent Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.6 }
+
+  # Turkish think tanks
+  - { name: "EDAM", type: rss, lang: tr, group: academic, weight: 0.9 }
+  - { name: "SETA", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.8 }
+  - { name: "İstanbul Politikalar Merkezi (IPC)", type: rss, lang: tr, group: academic, weight: 0.9 }
+  - { name: "TEPAV", type: rss, lang: tr, group: academic, weight: 0.8 }
+  - { name: "ORSAM", type: rss, lang: tr, group: academic, weight: 0.8 }
+  - { name: "Dış Politika Enstitüsü", type: rss, lang: tr, group: academic, weight: 0.7 }
+  - { name: "Perspektif", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7 }
+
+  # International news
+  - { name: "Reuters World", type: rss, lang: en, group: western, weight: 1.0 }
+  - { name: "AP International", type: rss, lang: en, group: western, weight: 1.0 }
+  - { name: "Financial Times World", type: rss, lang: en, group: western, weight: 0.9, paywalled: true }
+  - { name: "The Economist", type: rss, lang: en, group: western, weight: 0.9, paywalled: true }
+  - { name: "The Guardian World", type: rss, lang: en, group: western, weight: 0.8 }
+  - { name: "New York Times World", type: rss, lang: en, group: western, weight: 0.8, paywalled: true }
+  - { name: "Politico Europe", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "Le Monde (English)", type: rss, lang: en, group: western, weight: 0.8, paywalled: true }
+  - { name: "Der Spiegel International", type: rss, lang: en, group: western, weight: 0.8 }
+  - { name: "Al-Monitor", type: rss, lang: en, group: regional, weight: 0.9 }
+  - { name: "Al Jazeera English", type: rss, lang: en, group: regional, weight: 0.7 }
+  - { name: "Middle East Eye", type: rss, lang: en, group: regional, weight: 0.6 }
+  - { name: "Balkan Insight", type: rss, lang: en, group: regional, weight: 0.7 }
+  - { name: "OC Media (Caucasus)", type: rss, lang: en, group: regional, weight: 0.7 }
+  - { name: "TASS English", type: rss, lang: en, group: other_state, weight: 0.4 }
+  - { name: "Global Times", type: rss, lang: en, group: other_state, weight: 0.4 }
+
+  # Magazines and analysis
+  - { name: "Foreign Affairs", type: rss, lang: en, group: western, weight: 1.0, paywalled: true }
+  - { name: "Foreign Policy", type: rss, lang: en, group: western, weight: 0.9, paywalled: true }
+  - { name: "War on the Rocks", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "Lawfare", type: rss, lang: en, group: western, weight: 0.8 }
+  - { name: "The National Interest", type: rss, lang: en, group: western, weight: 0.7 }
+  - { name: "Survival (IISS)", type: rss, lang: en, group: academic, weight: 0.9 }
+
+  # International think tanks
+  - { name: "Carnegie Endowment", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "Brookings", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "Council on Foreign Relations", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "CSIS", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "Atlantic Council", type: rss, lang: en, group: western, weight: 0.8 }
+  - { name: "Chatham House", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "ECFR", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "IISS", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "RUSI", type: rss, lang: en, group: western, weight: 0.8 }
+  - { name: "SWP Berlin", type: rss, lang: en, group: western, weight: 0.9 }
+  - { name: "International Crisis Group", type: rss, lang: en, group: western, weight: 0.9 }
+
+  # Academic journals (via OpenAlex queries by journal ISSN; resolve ids in M1)
+  - { name: "International Security", type: api_openalex, group: academic, weight: 1.0 }
+  - { name: "International Organization", type: api_openalex, group: academic, weight: 1.0 }
+  - { name: "American Political Science Review", type: api_openalex, group: academic, weight: 1.0 }
+  - { name: "World Politics", type: api_openalex, group: academic, weight: 1.0 }
+  - { name: "Security Studies", type: api_openalex, group: academic, weight: 0.9 }
+  - { name: "Journal of Conflict Resolution", type: api_openalex, group: academic, weight: 0.9 }
+  - { name: "European Journal of International Relations", type: api_openalex, group: academic, weight: 0.9 }
+  - { name: "Turkish Studies", type: api_openalex, group: academic, weight: 0.9 }
+  - { name: "Insight Turkey", type: api_openalex, group: academic, weight: 0.8 }
+  - { name: "Perceptions", type: api_openalex, group: academic, weight: 0.8 }
+
+  # Broad discovery (per topic queries, not fixed feeds)
+  - { name: "Exa semantic search", type: api_exa, group: null, weight: 0.6 }
+  - { name: "GDELT DOC API", type: api_gdelt, group: null, weight: 0.5 }
