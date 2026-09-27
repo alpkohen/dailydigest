@@ -2,9 +2,15 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Single-owner allowlist (SPEC.md section 2): the only account allowed in is
- * OWNER_EMAIL. Anything else that completes a magic-link sign-in is signed
- * out immediately and sent back to /login.
+ * No visible login screen for now (single-owner app, not yet deployed
+ * publicly — the owner decided the friction wasn't worth it before going
+ * live). The magic-link flow (/login, /auth/callback) is left in place
+ * and still works, but middleware now auto-establishes a real Supabase
+ * session on the owner's behalf whenever a request arrives without one,
+ * using a password set once via the admin API (OWNER_PASSWORD, server
+ * env only). This keeps the anon-key + RLS architecture intact — every
+ * request is still genuinely authenticated as the owner — it just skips
+ * asking them to click through an email.
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -30,29 +36,29 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // /auth/callback is the route that EXCHANGES the magic-link code for a
-  // session, so no session exists yet when this request arrives — it must
-  // be allowed through untouched, or the exchange never runs and every
-  // sign-in bounces straight back to /login. /api/feedback and its
-  // confirmation page are the one-click email links (SPEC.md section 9):
-  // those come from an email client with no session at all, verified by
-  // their own HMAC signature instead.
   const isPublicRoute =
     request.nextUrl.pathname.startsWith("/auth/callback") ||
     request.nextUrl.pathname.startsWith("/api/feedback") ||
     request.nextUrl.pathname.startsWith("/feedback-confirmed");
   if (isPublicRoute) return response;
 
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
+  let { data } = await supabase.auth.getUser();
   const ownerEmail = process.env.OWNER_EMAIL;
+  const ownerPassword = process.env.OWNER_PASSWORD;
+
+  if (!data.user && ownerEmail && ownerPassword) {
+    const { error } = await supabase.auth.signInWithPassword({ email: ownerEmail, password: ownerPassword });
+    if (!error) ({ data } = await supabase.auth.getUser());
+  }
+
+  const user = data.user;
 
   if (user && ownerEmail && user.email !== ownerEmail) {
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL("/login?error=not_allowed", request.url));
   }
 
+  const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
   if (!user && !isLoginRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
