@@ -50,11 +50,11 @@ export interface TodayQuestionWidget {
 
 type TabKey = "all" | "critical" | "follow_up" | "research";
 
-const TABS: { key: TabKey; label: string }[] = [
+const TABS: { key: TabKey; label: string; className?: string }[] = [
   { key: "all", label: "All" },
-  { key: "critical", label: "Critical" },
-  { key: "follow_up", label: "Follow-up" },
-  { key: "research", label: "Research" },
+  { key: "critical", label: "Critical", className: "tab-critical" },
+  { key: "follow_up", label: "Follow-up", className: "tab-followup" },
+  { key: "research", label: "Research", className: "tab-research" },
 ];
 
 function formatEdition(periodDate: string) {
@@ -202,7 +202,11 @@ export function TodayView({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 20 }}>
             <div className="tab-nav" style={{ marginTop: 0 }}>
               {TABS.map((t) => (
-                <button key={t.key} className={`tab-item${tab === t.key ? " active" : ""}`} onClick={() => setTab(t.key)}>
+                <button
+                  key={t.key}
+                  className={`tab-item${tab === t.key ? ` active${t.className ? ` ${t.className}` : ""}` : ""}`}
+                  onClick={() => setTab(t.key)}
+                >
                   {t.label}
                 </button>
               ))}
@@ -261,9 +265,9 @@ export function TodayView({
 
             {restStories.map((story) => (
               <div key={story.id} className="feed-item">
-                <div className={`feed-eyebrow${story.section === "critical" ? " critical" : ""}`}>
+                <div className={`feed-eyebrow${story.section === "critical" ? " critical" : story.section === "follow_up" ? " follow-up" : ""}`}>
                   <span className="dot" />
-                  {story.section === "critical" ? "Critical" : story.topics[0]?.toUpperCase() ?? "General"}
+                  {story.section === "critical" ? "Critical" : (story.topics[0]?.toUpperCase() ?? "General")}
                 </div>
                 <Link href={`/story/${story.id}`} className="feed-headline">
                   {story.title}
@@ -281,7 +285,7 @@ export function TodayView({
 
             {researchForTab.map((r) => (
               <div key={r.id} className="feed-item">
-                <div className="feed-eyebrow">
+                <div className="feed-eyebrow research">
                   <span className="dot" />
                   New research
                 </div>

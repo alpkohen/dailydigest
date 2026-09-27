@@ -37,11 +37,12 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   const framing = (story.framing ?? []) as { perspective_group: string; summary: string }[];
   const entities = (story.entities ?? []) as string[];
   const perspectiveGroupCount = new Set(items.map((i) => i.sources?.perspective_groups?.name).filter(Boolean)).size;
+  const tierBadgeClass = story.tier === 1 ? "badge-critical" : story.tier === 2 ? "badge-accent" : "badge-neutral";
 
   return (
     <main>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span className="badge badge-critical">Tier {story.tier ?? "?"}</span>
+        <span className={`badge ${tierBadgeClass}`}>Tier {story.tier ?? "?"}</span>
         {story.summary && <AiTag label="AI-enriched" />}
       </div>
       <h1 className="h1-serif" style={{ marginTop: 10 }}>{story.title}</h1>

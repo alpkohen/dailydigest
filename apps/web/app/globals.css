@@ -20,6 +20,9 @@
   --danger: #c1706a;
   --danger-soft: rgba(193, 112, 106, 0.14);
 
+  --violet: #9b8cd9;
+  --violet-soft: rgba(155, 140, 217, 0.14);
+
   --font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 
@@ -479,6 +482,11 @@ textarea {
   color: var(--danger);
 }
 
+.badge-violet {
+  background: var(--violet-soft);
+  color: var(--violet);
+}
+
 /* Forms */
 
 .field {
@@ -744,6 +752,21 @@ textarea {
   border-bottom-color: var(--accent);
 }
 
+.tab-item.active.tab-critical {
+  color: var(--amber);
+  border-bottom-color: var(--amber);
+}
+
+.tab-item.active.tab-followup {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-item.active.tab-research {
+  color: var(--violet);
+  border-bottom-color: var(--violet);
+}
+
 .callout {
   border-left: 2px solid var(--accent);
   background: var(--bg-panel-alt);
@@ -799,6 +822,22 @@ textarea {
 
 .feed-eyebrow.critical .dot {
   background: var(--amber);
+}
+
+.feed-eyebrow.follow-up {
+  color: var(--accent);
+}
+
+.feed-eyebrow.follow-up .dot {
+  background: var(--accent);
+}
+
+.feed-eyebrow.research {
+  color: var(--violet);
+}
+
+.feed-eyebrow.research .dot {
+  background: var(--violet);
 }
 
 .feed-headline {
