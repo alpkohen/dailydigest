@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { saveItemToReadingListAction, saveStoryToReadingListAction } from "@/app/(app)/todayActions";
 import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
 import { AiTag } from "./AiTag";
@@ -142,7 +142,14 @@ export function TodayView({
 }) {
   const [tab, setTab] = useState<TabKey>("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
-  const greeting = useMemo(() => pickGreeting(OWNER_FIRST_NAME), []);
+  // Randomised per load, but the pick must not differ between the server
+  // render and the client's first render or React logs a hydration
+  // mismatch (and briefly flashes the wrong text). Render a fixed greeting
+  // on both, then swap in the random pick only after mount.
+  const [greeting, setGreeting] = useState(`Hello, ${OWNER_FIRST_NAME} 🌸.`);
+  useEffect(() => {
+    setGreeting(pickGreeting(OWNER_FIRST_NAME));
+  }, []);
 
   const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
   const savedStorySet = useMemo(() => new Set(savedStoryIds), [savedStoryIds]);
