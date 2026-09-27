@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Keep Next's workspace root anchored to this app in the monorepo preview.
+  turbopack: { root: process.cwd() },
   webpack: (config) => {
     // packages/db, packages/llm and packages/email are source-only
     // workspace packages: their internal imports use the ".js" extension

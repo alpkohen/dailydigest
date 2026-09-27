@@ -1,31 +1,32 @@
 import Link from "next/link";
 
 const LINKS = [
-  { href: "/", label: "Today" },
-  { href: "/topics", label: "Topics" },
-  { href: "/questions", label: "Questions" },
-  { href: "/watchlist", label: "Watchlist" },
-  { href: "/sources", label: "Sources" },
-  { href: "/archive", label: "Archive" },
-  { href: "/reading-list", label: "Reading" },
-  { href: "/briefs", label: "Briefs" },
-  { href: "/settings", label: "Settings" },
+  { href: "/", label: "Bugün" },
+  { href: "/topics", label: "Konular" },
+  { href: "/questions", label: "Sorular" },
+  { href: "/watchlist", label: "Takip" },
+  { href: "/sources", label: "Kaynaklar" },
+  { href: "/archive", label: "Arşiv" },
+  { href: "/reading-list", label: "Okuma listem" },
+  { href: "/briefs", label: "Bültenler" },
+  { href: "/settings", label: "Ayarlar" },
 ];
 
 export function Nav() {
   return (
-    <nav
+    <nav className="wb-nav"
       style={{
         display: "flex",
         flexWrap: "wrap",
         gap: 16,
-        padding: "12px 20px",
-        borderBottom: "1px solid #e5e5e5",
-        fontSize: 14,
+        padding: "18px 32px",
+        borderBottom: "1px solid #293039",
+        fontSize: 13,
         alignItems: "center",
+        background: "#0d1116",
       }}
     >
-      <strong style={{ marginRight: 12 }}>dailydigest</strong>
+      <Link href="/" style={{ marginRight: 18, color: "#e8eae8", textDecoration: "none", fontFamily: "Georgia, serif", fontSize: 21, letterSpacing: "-.5px" }}>World Brief<span style={{ color: "#79b9a8" }}>.</span></Link>
       {LINKS.map((link) => (
         <Link key={link.href} href={link.href} style={{ color: "#333", textDecoration: "none" }}>
           {link.label}

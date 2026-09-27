@@ -3,9 +3,9 @@ import { Nav } from "@/components/Nav";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <>
+    <div className="wb-shell">
       <Nav />
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "20px" }}>{children}</div>
-    </>
+      <div className="wb-content"><div className="wb-page">{children}</div></div>
+    </div>
   );
 }

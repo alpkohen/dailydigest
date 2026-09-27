@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "dailydigest",
-  description: "Personal foreign policy and political science intelligence desk.",
+  title: "World Brief · Evren Balta",
+  description: "Evren Balta'nın kişisel gündem ve araştırma masası.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="tr">
-      <body style={{ margin: 0, fontFamily: "-apple-system, Helvetica, Arial, sans-serif", color: "#1a1a1a" }}>
+      <body>
         {children}
       </body>
     </html>
