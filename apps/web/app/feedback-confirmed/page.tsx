@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const SIGNAL_LABELS: Record<string, string> = {
   relevant: "Marked as relevant.",
   not_relevant: "Marked as not relevant.",
@@ -15,9 +17,14 @@ export default async function FeedbackConfirmedPage({
 
   return (
     <main style={{ padding: "80px 24px", textAlign: "center" }}>
-      <h1 className="h1-serif">
-        <span className="text-accent">World</span> Brief<span className="text-accent">.</span>
-      </h1>
+      <Image
+        src="/brand/world-brief-full.webp"
+        alt="World Brief. The world's daily briefing, minus the drama."
+        width={1248}
+        height={299}
+        style={{ width: "100%", maxWidth: 340, height: "auto", margin: "0 auto" }}
+        priority
+      />
       {ok === "true" ? (
         <p className="dek" style={{ color: "var(--text)" }}>{(signal && SIGNAL_LABELS[signal]) ?? "Your feedback was recorded."}</p>
       ) : (

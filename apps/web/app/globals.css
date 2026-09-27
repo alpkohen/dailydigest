@@ -112,28 +112,12 @@ textarea {
 .sidebar-logo-row {
   display: flex;
   align-items: center;
-  gap: 9px;
   margin-bottom: 28px;
 }
 
-.sidebar-logo-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  border: 1px solid var(--border-strong);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-serif);
-  font-size: 14px;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.sidebar-logo-text {
-  font-family: var(--font-serif);
-  font-size: 16px;
-  color: var(--text);
+.sidebar-logo-mark {
+  width: 100%;
+  height: auto;
 }
 
 .sidebar-eyebrow {

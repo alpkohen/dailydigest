@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -19,9 +20,7 @@ export default function LoginPage() {
 
   return (
     <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-      <h1 className="h1-serif">
-        <span className="text-accent">World</span> Brief<span className="text-accent">.</span>
-      </h1>
+      <Image src="/brand/world-brief-full.webp" alt="World Brief. The world's daily briefing, minus the drama." width={1248} height={299} style={{ width: "100%", height: "auto" }} priority />
       <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
         <label className="field">
           <span className="field-label">Email</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
@@ -36,10 +37,7 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
   return (
     <aside className="sidebar">
       <div className="sidebar-logo-row">
-        <span className="sidebar-logo-icon">W</span>
-        <span className="sidebar-logo-text">
-          <span className="text-accent">World</span> Brief<span className="text-accent">.</span>
-        </span>
+        <Image src="/brand/world-brief-mark.webp" alt="World Brief." width={1248} height={226} className="sidebar-logo-mark" priority />
       </div>
 
       <p className="sidebar-eyebrow">Your desk</p>
