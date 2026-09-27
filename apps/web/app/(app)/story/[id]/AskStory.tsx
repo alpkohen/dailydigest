@@ -11,7 +11,7 @@ export function AskStory({ storyId }: { storyId: string }) {
 
   return (
     <section className="section">
-      <h2 className="h2-section">Bu story hakkında sor</h2>
+      <h2 className="h2-section">Ask about this story</h2>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -25,9 +25,9 @@ export function AskStory({ storyId }: { storyId: string }) {
         }}
         className="form-row"
       >
-        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="bir soru yaz..." className="input grow" />
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="ask a question..." className="input grow" />
         <button type="submit" className="btn btn-primary" disabled={pending}>
-          {pending ? "..." : "Sor"}
+          {pending ? "..." : "Ask"}
         </button>
       </form>
       {answer && <p className="dek" style={{ color: "var(--text)", marginTop: 10 }}>{answer}</p>}

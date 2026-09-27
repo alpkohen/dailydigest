@@ -29,15 +29,15 @@ export default async function ReadingListPage() {
   return (
     <main>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <h1 className="h1-serif">Okuma listesi</h1>
+        <h1 className="h1-serif">Reading list</h1>
         <a href="/api/reading-list/export" className="text-accent" style={{ fontSize: 12, textDecoration: "none" }}>
-          Markdown olarak dışa aktar
+          Export as Markdown
         </a>
       </div>
       {entries.map((e) => (
         <ReadingListRow key={e.id} {...e} />
       ))}
-      {entries.length === 0 && <p className="empty">Henüz kaydedilen bir şey yok. Story sayfasından &quot;Kaydet&quot; ile ekleyebilirsin.</p>}
+      {entries.length === 0 && <p className="empty">Nothing saved yet. Use &quot;Save&quot; on a story to add one.</p>}
     </main>
   );
 }

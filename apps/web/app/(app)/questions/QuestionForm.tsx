@@ -21,9 +21,9 @@ export function QuestionForm() {
       }}
       className="form-row"
     >
-      <input name="text" className="input grow" placeholder="Takip etmek istediğin analitik soru..." required disabled={pending} />
+      <input name="text" className="input grow" placeholder="An analytical question you want to track..." required disabled={pending} />
       <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? "Ekleniyor..." : "Ekle"}
+        {pending ? "Adding..." : "Add"}
       </button>
       {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>

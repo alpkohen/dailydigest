@@ -17,7 +17,7 @@ export default async function SettingsPage() {
 
   return (
     <main>
-      <h1 className="h1-serif">Ayarlar</h1>
+      <h1 className="h1-serif">Settings</h1>
       <div style={{ marginTop: 20 }}>
         <SettingsForm
           language={profile?.language ?? "tr"}
@@ -31,8 +31,8 @@ export default async function SettingsPage() {
       </div>
 
       <section className="section">
-        <h2 className="h2-section">Rol başına modeller</h2>
-        <p className="row-meta" style={{ margin: "0 0 12px" }}>Bunlar config/models.yaml üzerinden değiştirilir, buradan salt okunur gösterilir.</p>
+        <h2 className="h2-section">Models per role</h2>
+        <p className="row-meta" style={{ margin: "0 0 12px" }}>Set via config/models.yaml; shown here read-only.</p>
         <div className="table-wrap">
           <table className="table">
             <tbody>

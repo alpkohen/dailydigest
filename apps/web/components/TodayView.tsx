@@ -49,15 +49,15 @@ export interface TodayQuestionWidget {
 type TabKey = "all" | "critical" | "follow_up" | "research";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "Tüm gelişmeler" },
-  { key: "critical", label: "Kritik" },
-  { key: "follow_up", label: "Takip" },
-  { key: "research", label: "Araştırma" },
+  { key: "all", label: "All" },
+  { key: "critical", label: "Critical" },
+  { key: "follow_up", label: "Follow-up" },
+  { key: "research", label: "Research" },
 ];
 
 function formatEdition(periodDate: string) {
   try {
-    return new Date(periodDate).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }).toUpperCase();
+    return new Date(periodDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", weekday: "long" }).toUpperCase();
   } catch {
     return periodDate;
   }
@@ -68,6 +68,13 @@ function estimateReadMinutes(stories: TodayStory[], research: TodayResearchItem[
   return Math.max(3, Math.round(words / 200));
 }
 
+function sourceMeta(sourceCount?: number, perspectiveCount?: number) {
+  if (sourceCount == null) return null;
+  const sources = `${sourceCount} source${sourceCount === 1 ? "" : "s"}`;
+  if (!perspectiveCount) return sources;
+  return `${sources} · ${perspectiveCount} perspective${perspectiveCount === 1 ? "" : "s"}`;
+}
+
 function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initiallySaved: boolean }) {
   const [saved, setSaved] = useState(initiallySaved);
   const [pending, startTransition] = useTransition();
@@ -76,7 +83,7 @@ function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initial
     return (
       <span className="save-btn saved">
         <IconBookmark filled />
-        Kaydedildi
+        Saved
       </span>
     );
   }
@@ -84,7 +91,7 @@ function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initial
   return (
     <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveStoryToReadingListAction(storyId); setSaved(true); })}>
       <IconBookmark />
-      Kaydet
+      Save
     </button>
   );
 }
@@ -97,7 +104,7 @@ function SaveItemButton({ itemId, initiallySaved }: { itemId: string; initiallyS
     return (
       <span className="save-btn saved">
         <IconBookmark filled />
-        Kaydedildi
+        Saved
       </span>
     );
   }
@@ -105,7 +112,7 @@ function SaveItemButton({ itemId, initiallySaved }: { itemId: string; initiallyS
   return (
     <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveItemToReadingListAction(itemId); setSaved(true); })}>
       <IconBookmark />
-      Kaydet
+      Save
     </button>
   );
 }
@@ -164,11 +171,11 @@ export function TodayView({
     <div>
       <div className="top-meta">
         <span>
-          Çalışma alanı<span className="crumb-sep">/</span>Günlük bülten
+          Workspace<span className="crumb-sep">/</span>Daily brief
         </span>
         <span className="top-meta-status">
           <span className="status-dot" />
-          Günlük brief · {briefTime ?? "07:00"}
+          Daily brief · {briefTime ?? "07:00"}
         </span>
       </div>
 
@@ -177,12 +184,12 @@ export function TodayView({
           <div className="today-header">
             <div>
               <p className="eyebrow">{formatEdition(periodDate)}</p>
-              <h1 className="h1-serif">Günaydın, {OWNER_FIRST_NAME}.</h1>
-              <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>Dünyadaki gelişmeler. Senin için anlamı.</p>
+              <h1 className="greeting-title">Good morning, {OWNER_FIRST_NAME}.</h1>
+              <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>The developments shaping the world. What they mean for you.</p>
             </div>
             <div className="today-header-stat">
               <div className="num">{stories.length}</div>
-              <div className="label">gelişme · {readMinutes} dk okuma</div>
+              <div className="label">developments · {readMinutes} min read</div>
             </div>
           </div>
 
@@ -191,7 +198,7 @@ export function TodayView({
           <section>
             <h2 className="h2-section framing-heading">
               <IconFrame className="framing-icon" />
-              Bugünün Çerçevesi
+              Today&apos;s Framing
             </h2>
             <p className="dek">{headline}</p>
           </section>
@@ -206,7 +213,7 @@ export function TodayView({
             </div>
             {allTopics.length > 0 && (
               <select className="select" style={{ width: "auto", fontSize: 12 }} value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-                <option value="all">Tüm konular</option>
+                <option value="all">All topics</option>
                 {allTopics.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -221,7 +228,7 @@ export function TodayView({
               <div className="lead-card-v2">
                 <div className="feed-eyebrow critical">
                   <span className="dot" />
-                  Kritik{leadStory.topics[0] ? ` · ${leadStory.topics[0].toUpperCase()}` : ""}
+                  Critical{leadStory.topics[0] ? ` · ${leadStory.topics[0].toUpperCase()}` : ""}
                 </div>
                 <Link href={`/story/${leadStory.id}`} className="feed-headline lead">
                   {leadStory.title}
@@ -229,16 +236,12 @@ export function TodayView({
                 <p className="feed-desc">{leadStory.summary}</p>
                 {leadStory.whyItMatters && (
                   <div className="callout">
-                    <div className="callout-label">Neden önemli</div>
+                    <div className="callout-label">Why it matters</div>
                     <div className="callout-text">{leadStory.whyItMatters}</div>
                   </div>
                 )}
                 <div className="feed-footer">
-                  <span className="feed-meta">
-                    {leadStory.sourceCount != null
-                      ? `${leadStory.sourceCount} örnek kaynak${leadStory.perspectiveCount ? ` · ${leadStory.perspectiveCount} perspektif` : ""}`
-                      : leadStory.topics.join(", ")}
-                  </span>
+                  <span className="feed-meta">{sourceMeta(leadStory.sourceCount, leadStory.perspectiveCount) ?? leadStory.topics.join(", ")}</span>
                   <SaveStoryButton storyId={leadStory.id} initiallySaved={savedStorySet.has(leadStory.id)} />
                 </div>
               </div>
@@ -248,18 +251,14 @@ export function TodayView({
               <div key={story.id} className="feed-item">
                 <div className={`feed-eyebrow${story.section === "critical" ? " critical" : ""}`}>
                   <span className="dot" />
-                  {story.section === "critical" ? "Kritik" : story.topics[0]?.toUpperCase() ?? "Genel"}
+                  {story.section === "critical" ? "Critical" : story.topics[0]?.toUpperCase() ?? "General"}
                 </div>
                 <Link href={`/story/${story.id}`} className="feed-headline">
                   {story.title}
                 </Link>
                 <p className="feed-desc">{story.summary}</p>
                 <div className="feed-footer">
-                  <span className="feed-meta">
-                    {story.sourceCount != null
-                      ? `${story.sourceCount} örnek kaynak${story.perspectiveCount ? ` · ${story.perspectiveCount} perspektif` : ""}`
-                      : story.topics.join(", ")}
-                  </span>
+                  <span className="feed-meta">{sourceMeta(story.sourceCount, story.perspectiveCount) ?? story.topics.join(", ")}</span>
                   <SaveStoryButton storyId={story.id} initiallySaved={savedStorySet.has(story.id)} />
                 </div>
               </div>
@@ -269,49 +268,49 @@ export function TodayView({
               <div key={r.id} className="feed-item">
                 <div className="feed-eyebrow">
                   <span className="dot" />
-                  Yeni araştırma
+                  New research
                 </div>
                 <div className="feed-headline">{r.title}</div>
                 <p className="feed-desc">{r.argument}</p>
                 <div className="feed-footer">
-                  <span className="feed-meta">Örnek araştırma notu</span>
+                  <span className="feed-meta">Research note</span>
                   {r.itemId && <SaveItemButton itemId={r.itemId} initiallySaved={savedItemSet.has(r.itemId)} />}
                 </div>
               </div>
             ))}
 
-            {!leadStory && restStories.length === 0 && researchForTab.length === 0 && <p className="empty">Bu filtrede gösterilecek bir şey yok.</p>}
+            {!leadStory && restStories.length === 0 && researchForTab.length === 0 && <p className="empty">Nothing to show for this filter.</p>}
           </div>
 
           <div className="end-marker">
             <IconCheck />
-            Bugünkü seçkinin sonuna geldin.
+            You&apos;ve reached the end of today&apos;s picks.
           </div>
         </main>
 
         {hasRail && (
           <aside>
-            <p className="rail-header">Masanın Kenarında</p>
+            <p className="rail-header">On the Side</p>
 
             {questionWidget && (
               <div className="rail-card-v2">
-                <p className="rail-card-eyebrow">Takip ettiğin soru</p>
+                <p className="rail-card-eyebrow">Question you&apos;re tracking</p>
                 <p className="rail-card-title-v2">{questionWidget.text}</p>
                 <p className="rail-card-desc">{questionWidget.note}</p>
                 <Link href={`/story/${questionWidget.storyId}`} className="rail-card-link">
-                  İlgili gelişme <IconArrowRight />
+                  Related development <IconArrowRight />
                 </Link>
               </div>
             )}
 
             {outsideRadar && (
               <div className="rail-card-v2">
-                <p className="rail-card-eyebrow">Radarının dışında</p>
+                <p className="rail-card-eyebrow">Outside your radar</p>
                 <p className="rail-card-title-v2">{outsideRadar.title}</p>
                 <p className="rail-card-desc">{outsideRadar.reason}</p>
                 {outsideRadar.url && (
                   <a href={outsideRadar.url} target="_blank" rel="noreferrer" className="rail-card-link">
-                    Kaynağa git <IconArrowRight />
+                    View source <IconArrowRight />
                   </a>
                 )}
               </div>
@@ -319,7 +318,7 @@ export function TodayView({
 
             {watchlist && watchlist.length > 0 && (
               <div className="rail-card-v2">
-                <p className="rail-card-eyebrow">Takip listesinden</p>
+                <p className="rail-card-eyebrow">From your watchlist</p>
                 <div className="link-list">
                   {watchlist.map((w) => (
                     <a key={w.id} href={w.url} target="_blank" rel="noreferrer">
@@ -332,15 +331,11 @@ export function TodayView({
                 </div>
               </div>
             )}
-
-            <p className="rail-tagline">
-              Daha çok haber değil,
-              <br />
-              daha iyi bir perspektif.
-            </p>
           </aside>
         )}
       </div>
+
+      <p className="page-tagline">Not more news. A better perspective.</p>
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default async function TopicsPage() {
 
   return (
     <main>
-      <h1 className="h1-serif">Konular</h1>
+      <h1 className="h1-serif">Topics</h1>
       <TopicForm />
       {withPrecision.map((t) => (
         <div key={t.id}>
@@ -27,13 +27,13 @@ export default async function TopicsPage() {
               className={t.precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "text-danger" : "text-faint"}
               style={{ fontSize: 11, margin: "-6px 0 10px" }}
             >
-              Kesinlik: %{Math.round(t.precision.precision * 100)} ({t.precision.sampleSize} geri bildirim)
-              {t.precision.precision < PRECISION_SUGGESTION_THRESHOLD && " · Tanımı gözden geçirmeyi düşün"}
+              Precision: {Math.round(t.precision.precision * 100)}% ({t.precision.sampleSize} feedback)
+              {t.precision.precision < PRECISION_SUGGESTION_THRESHOLD && " · Consider revisiting the definition"}
             </p>
           )}
         </div>
       ))}
-      {withPrecision.length === 0 && <p className="empty">Henüz konu yok.</p>}
+      {withPrecision.length === 0 && <p className="empty">No topics yet.</p>}
     </main>
   );
 }

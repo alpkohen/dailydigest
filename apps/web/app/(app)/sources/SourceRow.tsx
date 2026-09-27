@@ -35,11 +35,11 @@ export function SourceRow({
         <span className="row-title" style={{ marginRight: 8 }}>{name}</span>
         <span className={`badge ${HEALTH_BADGE[healthStatus] ?? "badge-neutral"}`}>{healthStatus}</span>
         <div className="row-meta">
-          {type} · ağırlık {weight} {perspectiveGroup ? `· ${perspectiveGroup}` : ""}
+          {type} · weight {weight} {perspectiveGroup ? `· ${perspectiveGroup}` : ""}
         </div>
       </div>
       <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setSourceActiveAction(id, !active))}>
-        {active ? "Sustur" : "Etkinleştir"}
+        {active ? "Mute" : "Activate"}
       </button>
     </div>
   );

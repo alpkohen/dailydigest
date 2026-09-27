@@ -38,13 +38,13 @@ export function ReadingListRow({
         </a>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => toggleReadAction(id, !isRead))}>
-            {isRead ? "Okunmadı yap" : "Okundu"}
+            {isRead ? "Mark unread" : "Read"}
           </button>
           <button className="btn btn-sm" disabled={pending} onClick={() => setEditing((v) => !v)}>
-            Not/etiket
+            Notes/tags
           </button>
           <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => removeFromReadingListAction(id))}>
-            Kaldır
+            Remove
           </button>
         </div>
       </div>
@@ -52,8 +52,8 @@ export function ReadingListRow({
       {notes && !editing && <div className="row-summary">{notes}</div>}
       {editing && (
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, maxWidth: 400 }}>
-          <input className="input" value={tagsValue} onChange={(e) => setTagsValue(e.target.value)} placeholder="etiketler, virgülle" />
-          <textarea className="textarea" value={notesValue} onChange={(e) => setNotesValue(e.target.value)} placeholder="not" rows={2} />
+          <input className="input" value={tagsValue} onChange={(e) => setTagsValue(e.target.value)} placeholder="tags, comma separated" />
+          <textarea className="textarea" value={notesValue} onChange={(e) => setNotesValue(e.target.value)} placeholder="note" rows={2} />
           <button
             className="btn btn-primary btn-sm"
             disabled={pending}
@@ -65,7 +65,7 @@ export function ReadingListRow({
               })
             }
           >
-            Kaydet
+            Save
           </button>
         </div>
       )}

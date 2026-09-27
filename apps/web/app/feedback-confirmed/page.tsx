@@ -1,9 +1,9 @@
 const SIGNAL_LABELS: Record<string, string> = {
-  relevant: "İlgili olarak işaretlendi.",
-  not_relevant: "İlgisiz olarak işaretlendi.",
-  less_like_this: "Bunun gibi daha az içerik göreceksin.",
-  saved: "Kaydedildi.",
-  mute_source: "Kaynak susturuldu.",
+  relevant: "Marked as relevant.",
+  not_relevant: "Marked as not relevant.",
+  less_like_this: "You'll see less like this.",
+  saved: "Saved.",
+  mute_source: "Source muted.",
 };
 
 export default async function FeedbackConfirmedPage({
@@ -15,11 +15,11 @@ export default async function FeedbackConfirmedPage({
 
   return (
     <main style={{ padding: "80px 24px", textAlign: "center" }}>
-      <h1 className="h1-serif">dailydigest.</h1>
+      <h1 className="h1-serif">World Brief.</h1>
       {ok === "true" ? (
-        <p className="dek" style={{ color: "var(--text)" }}>{(signal && SIGNAL_LABELS[signal]) ?? "Geri bildirimin kaydedildi."}</p>
+        <p className="dek" style={{ color: "var(--text)" }}>{(signal && SIGNAL_LABELS[signal]) ?? "Your feedback was recorded."}</p>
       ) : (
-        <p className="text-danger">Bu link geçersiz veya süresi dolmuş.</p>
+        <p className="text-danger">This link is invalid or has expired.</p>
       )}
     </main>
   );

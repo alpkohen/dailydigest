@@ -912,10 +912,23 @@ a.feed-headline:hover {
   margin: 22px 0;
 }
 
-.rail-tagline {
+.greeting-title {
   font-family: var(--font-serif);
-  font-size: 19px;
-  line-height: 1.35;
-  color: var(--text-dim);
-  margin-top: 8px;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 30px;
+  color: #f2ead9;
+  margin: 4px 0 4px;
+}
+
+.page-tagline {
+  text-align: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  margin-top: 48px;
+  padding-top: 28px;
 }

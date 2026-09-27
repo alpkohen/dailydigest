@@ -21,9 +21,9 @@ export function TopicForm() {
       }}
       className="form-row"
     >
-      <input name="sentence" className="input grow" placeholder="Bir cümleyle yeni bir konu tanımla..." required disabled={pending} />
+      <input name="sentence" className="input grow" placeholder="Define a new topic in one sentence..." required disabled={pending} />
       <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? "Oluşturuluyor..." : "Ekle"}
+        {pending ? "Creating..." : "Add"}
       </button>
       {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>

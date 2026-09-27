@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const STANCE_LABELS: Record<string, string> = { supports: "Destekliyor", complicates: "Karmaşıklaştırıyor", neutral: "Nötr bağlam" };
+const STANCE_LABELS: Record<string, string> = { supports: "Supports", complicates: "Complicates", neutral: "Neutral context" };
 
 export default async function QuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,10 +29,10 @@ export default async function QuestionDetailPage({ params }: { params: Promise<{
   return (
     <main>
       <h1 className="h1-serif">{question.text}</h1>
-      <span className={`badge ${question.active ? "badge-accent" : "badge-neutral"}`}>{question.active ? "aktif" : "pasif"}</span>
+      <span className={`badge ${question.active ? "badge-accent" : "badge-neutral"}`}>{question.active ? "active" : "inactive"}</span>
 
       <section className="section">
-        <h2 className="h2-section">Haftalık güncellemeler</h2>
+        <h2 className="h2-section">Weekly updates</h2>
         {(updateRows ?? []).map((u) => (
           <div key={u.id} style={{ margin: "14px 0" }}>
             <div className="row-meta">
@@ -41,15 +41,15 @@ export default async function QuestionDetailPage({ params }: { params: Promise<{
             <p className="row-summary" style={{ marginTop: 4 }}>{u.text}</p>
           </div>
         ))}
-        {(updateRows ?? []).length === 0 && <p className="empty">Henüz haftalık güncelleme yok.</p>}
+        {(updateRows ?? []).length === 0 && <p className="empty">No weekly updates yet.</p>}
       </section>
 
       <section className="section">
-        <h2 className="h2-section">Kanıt günlüğü ({evidence.length})</h2>
+        <h2 className="h2-section">Evidence log ({evidence.length})</h2>
         {evidence.map((e) => (
           <div key={e.id} className="row-flex" style={{ display: "block" }}>
             <div className="row-meta">
-              {STANCE_LABELS[e.stance] ?? e.stance} · {new Date(e.created_at).toLocaleDateString("tr-TR")}
+              {STANCE_LABELS[e.stance] ?? e.stance} · {new Date(e.created_at).toLocaleDateString("en-GB")}
             </div>
             <p className="row-summary" style={{ marginTop: 4 }}>{e.note}</p>
             {e.stories && (
@@ -59,7 +59,7 @@ export default async function QuestionDetailPage({ params }: { params: Promise<{
             )}
           </div>
         ))}
-        {evidence.length === 0 && <p className="empty">Henüz kanıt yok.</p>}
+        {evidence.length === 0 && <p className="empty">No evidence yet.</p>}
       </section>
     </main>
   );

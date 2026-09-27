@@ -13,7 +13,7 @@ export function QuestionRow({ id, text, active }: { id: string; text: string; ac
         {text}
       </Link>
       <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setQuestionActiveAction(id, !active))}>
-        {active ? "Duraklat" : "Etkinleştir"}
+        {active ? "Pause" : "Activate"}
       </button>
     </div>
   );

@@ -17,8 +17,8 @@ export default async function TodayPage() {
   if (!brief) {
     return (
       <main>
-        <h1 className="h1-serif">Günaydın, {OWNER_FIRST_NAME}.</h1>
-        <p className="empty">Henüz bir brief oluşturulmadı.</p>
+        <h1 className="greeting-title">Good morning, {OWNER_FIRST_NAME}.</h1>
+        <p className="empty">No brief has been generated yet.</p>
       </main>
     );
   }

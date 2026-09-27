@@ -21,15 +21,15 @@ export default async function WatchlistPage() {
 
   return (
     <main>
-      <h1 className="h1-serif">Takip listesi</h1>
+      <h1 className="h1-serif">Watchlist</h1>
       <WatchForm />
       {(watches ?? []).map((w) => (
         <WatchRow key={w.id} id={w.id} name={w.name} kind={w.kind} active={w.active} />
       ))}
-      {(watches ?? []).length === 0 && <p className="empty">Henüz takip yok.</p>}
+      {(watches ?? []).length === 0 && <p className="empty">Nothing tracked yet.</p>}
 
       <section className="section">
-        <h2 className="h2-section">Son yakalananlar</h2>
+        <h2 className="h2-section">Recently captured</h2>
         <div className="link-list">
           {recent.map((r, i) => (
             <a key={i} href={r.items!.url} target="_blank" rel="noreferrer">
@@ -38,7 +38,7 @@ export default async function WatchlistPage() {
             </a>
           ))}
         </div>
-        {recent.length === 0 && <p className="empty">Henüz bir şey yakalanmadı.</p>}
+        {recent.length === 0 && <p className="empty">Nothing captured yet.</p>}
       </section>
     </main>
   );

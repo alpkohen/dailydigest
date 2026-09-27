@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { submitStoryFeedbackAction } from "./actions";
 
 const SIGNALS: { signal: string; label: string }[] = [
-  { signal: "relevant", label: "İlgili" },
-  { signal: "not_relevant", label: "İlgisiz" },
-  { signal: "less_like_this", label: "Bunun gibi az göster" },
-  { signal: "saved", label: "Kaydet" },
+  { signal: "relevant", label: "Relevant" },
+  { signal: "not_relevant", label: "Not relevant" },
+  { signal: "less_like_this", label: "Show less like this" },
+  { signal: "saved", label: "Save" },
 ];
 
 export function FeedbackButtons({ storyId }: { storyId: string }) {

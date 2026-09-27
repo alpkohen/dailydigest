@@ -20,7 +20,7 @@ export default async function SourcesPage() {
 
   return (
     <main>
-      <h1 className="h1-serif">Kaynaklar</h1>
+      <h1 className="h1-serif">Sources</h1>
       {((sources ?? []) as unknown as Row[]).map((s) => (
         <SourceRow
           key={s.id}

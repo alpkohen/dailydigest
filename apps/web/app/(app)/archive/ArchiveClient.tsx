@@ -15,7 +15,7 @@ export function ArchiveClient() {
   return (
     <div>
       <section className="section">
-        <h2 className="h2-section">Ara</h2>
+        <h2 className="h2-section">Search</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -32,10 +32,10 @@ export function ArchiveClient() {
             className="input grow"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ör: Türkiye AB gümrük birliği"
+            placeholder="e.g. Turkey EU customs union"
           />
           <button type="submit" className="btn btn-primary" disabled={pending}>
-            Ara
+            Search
           </button>
         </form>
         {results && (
@@ -46,17 +46,17 @@ export function ArchiveClient() {
                   {r.title}
                 </div>
                 <div className="row-meta">
-                  {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString("tr-TR") : "?"} · {r.language ?? "?"}
+                  {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString("en-GB") : "?"} · {r.language ?? "?"}
                 </div>
               </a>
             ))}
-            {results.length === 0 && <p className="empty">Sonuç yok.</p>}
+            {results.length === 0 && <p className="empty">No results.</p>}
           </div>
         )}
       </section>
 
       <section className="section">
-        <h2 className="h2-section">Arşive sor</h2>
+        <h2 className="h2-section">Ask the archive</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -77,10 +77,10 @@ export function ArchiveClient() {
             className="input grow"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="ör: AB'nin Türkiye üyeliğine ilişkin dili son 6 ayda nasıl değişti?"
+            placeholder="e.g. How has the EU's language on Turkish membership changed in the last 6 months?"
           />
           <button type="submit" className="btn btn-primary" disabled={pending}>
-            {pending ? "..." : "Sor"}
+            {pending ? "..." : "Ask"}
           </button>
         </form>
         {answer && (
@@ -90,7 +90,7 @@ export function ArchiveClient() {
             </p>
             {citations.length > 0 && (
               <div className="row-meta">
-                Kaynaklar:{" "}
+                Sources:{" "}
                 {citations.map((c, i) => (
                   <a key={c.id} href={c.url} target="_blank" rel="noreferrer" className="text-accent" style={{ marginRight: 6 }}>
                     [{i + 1}]

@@ -25,16 +25,16 @@ export function TopicRow({
           {name}
         </a>
         <div className="row-meta">
-          {priority} · {frequency} · {active ? "aktif" : "pasif"}
+          {priority} · {frequency} · {active ? "active" : "inactive"}
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setTopicActiveAction(id, !active))}>
-          {active ? "Duraklat" : "Etkinleştir"}
+          {active ? "Pause" : "Activate"}
         </button>
         {active && (
           <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => deleteTopicAction(id))}>
-            Sil
+            Delete
           </button>
         )}
       </div>

@@ -1,3 +1,3 @@
-export const OWNER_DISPLAY_NAME = "Alp Köhen";
-export const OWNER_FIRST_NAME = "Alp";
-export const OWNER_INITIALS = "AK";
+export const OWNER_DISPLAY_NAME = "Evren Balta";
+export const OWNER_FIRST_NAME = "Evren";
+export const OWNER_INITIALS = "EB";

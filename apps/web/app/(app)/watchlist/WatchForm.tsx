@@ -21,15 +21,15 @@ export function WatchForm() {
       }}
       className="form-row"
     >
-      <input name="name" className="input" placeholder="İsim (kişi, kurum, dergi)" required disabled={pending} />
+      <input name="name" className="input" placeholder="Name (person, institution, journal)" required disabled={pending} />
       <select name="kind" className="select" disabled={pending}>
-        <option value="person">Kişi</option>
-        <option value="institution">Kurum</option>
-        <option value="journal">Dergi</option>
+        <option value="person">Person</option>
+        <option value="institution">Institution</option>
+        <option value="journal">Journal</option>
       </select>
-      <input name="query" className="input grow" placeholder="Arama sorgusu (opsiyonel, boşsa isim kullanılır)" disabled={pending} />
+      <input name="query" className="input grow" placeholder="Search query (optional, defaults to name)" disabled={pending} />
       <button type="submit" className="btn btn-primary" disabled={pending}>
-        {pending ? "Ekleniyor..." : "Ekle"}
+        {pending ? "Adding..." : "Add"}
       </button>
       {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
     </form>

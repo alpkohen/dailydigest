@@ -48,42 +48,42 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
 
       {story.summary && (
         <section className="section">
-          <h2 className="h2-section">Özet</h2>
+          <h2 className="h2-section">Summary</h2>
           <p className="dek" style={{ color: "var(--text)" }}>{story.summary}</p>
         </section>
       )}
 
       {story.what_changed && (
         <section className="section">
-          <h2 className="h2-section">Ne değişti</h2>
+          <h2 className="h2-section">What changed</h2>
           <p className="dek" style={{ color: "var(--text)" }}>{story.what_changed}</p>
         </section>
       )}
 
       {story.why_it_matters && (
         <section className="section">
-          <h2 className="h2-section">Neden önemli</h2>
+          <h2 className="h2-section">Why it matters</h2>
           <p className="dek" style={{ color: "var(--text)" }}>{story.why_it_matters}</p>
         </section>
       )}
 
       {story.watch_next && (
         <section className="section">
-          <h2 className="h2-section">Sırada ne var</h2>
+          <h2 className="h2-section">What&apos;s next</h2>
           <p className="dek" style={{ color: "var(--text)" }}>{story.watch_next}</p>
         </section>
       )}
 
       {entities.length > 0 && (
         <section className="section">
-          <h2 className="h2-section">Öne çıkan isimler / kurumlar</h2>
+          <h2 className="h2-section">Key names &amp; institutions</h2>
           <p className="row-summary">{entities.join(", ")}</p>
         </section>
       )}
 
       {perspectiveGroupCount >= 2 && framing.length > 0 && (
         <section className="section">
-          <h2 className="h2-section">Perspektif karşılaştırması</h2>
+          <h2 className="h2-section">Perspective comparison</h2>
           {framing.map((f) => (
             <div key={f.perspective_group} style={{ margin: "12px 0" }}>
               <div className="row-title">{f.perspective_group}</div>
@@ -94,7 +94,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
       )}
 
       <section className="section">
-        <h2 className="h2-section">Kaynaklar ({items.length})</h2>
+        <h2 className="h2-section">Sources ({items.length})</h2>
         {items.map((item, i) => (
           <a key={i} href={item.url} target="_blank" rel="noreferrer" className="row-link">
             <div className="row-title">{item.title}</div>
