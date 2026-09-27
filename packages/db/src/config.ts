@@ -57,7 +57,8 @@ export const sourceSeedSchema = z.object({
   group: z.string().nullable().optional(),
   weight: z.number().min(0).max(1),
   paywalled: z.boolean().optional(),
-  url: z.string().optional(),
+  url: z.string().nullable().optional(),
+  issn: z.string().optional(),
 });
 
 export const sourcesSeedConfigSchema = z.object({

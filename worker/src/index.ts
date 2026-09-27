@@ -1,13 +1,23 @@
-import type { ModelsConfig } from "@dailydigest/db";
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
+import { runExtractStage } from "./stages/extract.js";
+import { runIngestStage } from "./stages/ingest.js";
 import { runPingStage } from "./stages/ping.js";
+import { runSeedSourcesStage } from "./stages/seedSources.js";
 
-type Stage = (env: Env, models: ModelsConfig, date: string) => Promise<void>;
+type WorkerConfig = Awaited<ReturnType<typeof loadWorkerConfig>>;
+type Stage = (env: Env, config: WorkerConfig, date: string) => Promise<void>;
 
 const STAGES: Record<string, Stage> = {
-  ping: runPingStage,
+  ping: (env, config, date) => runPingStage(env, config.models, date),
+  seed_sources: (env, config) => runSeedSourcesStage(env, config.sourcesSeed),
+  ingest: (env, config, date) => runIngestStage(env, config.limits, date),
+  extract: (env, _config, date) => runExtractStage(env, date),
 };
+
+// Order matters for --all: sources must exist before ingest can read them,
+// and items must exist before extract can process them.
+const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract"];
 
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();
@@ -35,9 +45,9 @@ async function main() {
   }
 
   const env = loadEnv();
-  const { models } = await loadWorkerConfig();
+  const config = await loadWorkerConfig();
 
-  const stagesToRun = runAll ? Object.keys(STAGES) : [stage as string];
+  const stagesToRun = runAll ? ALL_STAGE_ORDER : [stage as string];
   for (const name of stagesToRun) {
     const run = STAGES[name];
     if (!run) {
@@ -45,11 +55,15 @@ async function main() {
       process.exit(1);
     }
     console.log(`--- running stage "${name}" for ${date} ---`);
-    await run(env, models, date);
+    await run(env, config, date);
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    // rss-parser's underlying HTTP agent can keep the event loop alive
+    // indefinitely, so every exit path here is explicit.
+    console.error(err);
+    process.exit(1);
+  });

@@ -8,6 +8,9 @@ const envSchema = z.object({
   // a role is ever switched back.
   OPENAI_API_KEY: z.string().min(1),
   ANTHROPIC_API_KEY: z.string().optional(),
+  // Optional (SPEC.md section 15, open decision #5): ingest's exa jobs are
+  // skipped with a warning when unset rather than failing the stage.
+  EXA_API_KEY: z.string().optional(),
   // UUID of the single owner's auth.users row. There is no signup flow yet
   // (SPEC.md section 2: one owner, allowlisted by OWNER_EMAIL in the web
   // app), so this is captured once after the first magic-link sign-in and
