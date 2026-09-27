@@ -9,6 +9,8 @@ export interface BriefSectionItem {
   title?: string;
   summary?: string;
   argument?: string;
+  /** One-click signed links (SPEC.md section 9); omitted for research items. */
+  links?: { save: string; notRelevant: string; lessLikeThis: string };
 }
 
 export interface BriefContent {
@@ -60,6 +62,21 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                     <Text style={{ fontSize: 13, lineHeight: "19px", color: "#333333", margin: 0 }}>
                       {item.summary ?? item.argument}
                     </Text>
+                    {item.links && (
+                      <Text style={{ fontSize: 11, margin: "4px 0 0" }}>
+                        <a href={item.links.save} style={{ color: "#666" }}>
+                          Kaydet
+                        </a>
+                        {" · "}
+                        <a href={item.links.notRelevant} style={{ color: "#666" }}>
+                          İlgisiz
+                        </a>
+                        {" · "}
+                        <a href={item.links.lessLikeThis} style={{ color: "#666" }}>
+                          Bunun gibi az göster
+                        </a>
+                      </Text>
+                    )}
                   </div>
                 ))}
                 <Hr style={{ borderColor: "#eeeeee" }} />

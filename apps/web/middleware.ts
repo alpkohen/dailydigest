@@ -33,9 +33,15 @@ export async function middleware(request: NextRequest) {
   // /auth/callback is the route that EXCHANGES the magic-link code for a
   // session, so no session exists yet when this request arrives — it must
   // be allowed through untouched, or the exchange never runs and every
-  // sign-in bounces straight back to /login.
-  const isAuthCallbackRoute = request.nextUrl.pathname.startsWith("/auth/callback");
-  if (isAuthCallbackRoute) return response;
+  // sign-in bounces straight back to /login. /api/feedback and its
+  // confirmation page are the one-click email links (SPEC.md section 9):
+  // those come from an email client with no session at all, verified by
+  // their own HMAC signature instead.
+  const isPublicRoute =
+    request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/api/feedback") ||
+    request.nextUrl.pathname.startsWith("/feedback-confirmed");
+  if (isPublicRoute) return response;
 
   const { data } = await supabase.auth.getUser();
   const user = data.user;

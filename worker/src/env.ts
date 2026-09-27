@@ -24,6 +24,12 @@ const envSchema = z.object({
   // app), so this is captured once after the first magic-link sign-in and
   // set as a worker secret.
   OWNER_ID: z.string().uuid(),
+  // Signs the one-click feedback links embedded in the brief email
+  // (SPEC.md section 9). Must match apps/web's HMAC_SECRET, which verifies
+  // them.
+  HMAC_SECRET: z.string().min(16).optional(),
+  // Base URL the feedback links point at; defaults to local dev.
+  WEB_APP_URL: z.string().url().default("http://localhost:3100"),
 });
 
 export type Env = z.infer<typeof envSchema>;

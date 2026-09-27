@@ -1,7 +1,30 @@
-import { createServiceRoleClient } from "@dailydigest/db";
+import { createFeedbackLink, createServiceRoleClient } from "@dailydigest/db";
 import { renderDailyBrief, type BriefContent } from "@dailydigest/email";
 import { Resend } from "resend";
 import type { Env } from "../env.js";
+
+function withFeedbackLinks(content: BriefContent, env: Env): BriefContent {
+  if (!env.HMAC_SECRET) return content;
+  const secret = env.HMAC_SECRET;
+
+  return {
+    ...content,
+    sections: content.sections.map((section) => {
+      if (section.section === "new_research") return section;
+      return {
+        ...section,
+        items: section.items.map((item) => ({
+          ...item,
+          links: {
+            save: `${env.WEB_APP_URL}/api/feedback?token=${createFeedbackLink({ targetType: "story", targetId: item.id, signal: "saved" }, secret)}`,
+            notRelevant: `${env.WEB_APP_URL}/api/feedback?token=${createFeedbackLink({ targetType: "story", targetId: item.id, signal: "not_relevant" }, secret)}`,
+            lessLikeThis: `${env.WEB_APP_URL}/api/feedback?token=${createFeedbackLink({ targetType: "story", targetId: item.id, signal: "less_like_this" }, secret)}`,
+          },
+        })),
+      };
+    }),
+  };
+}
 
 const DAY_NAMES_TR = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
 const MONTH_NAMES_TR = [
@@ -43,7 +66,7 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
     return;
   }
 
-  const content = brief.content as BriefContent;
+  const content = withFeedbackLinks(brief.content as BriefContent, env);
   const dateLabel = formatDateLabel(date);
   const { html, text } = await renderDailyBrief(content, dateLabel);
 

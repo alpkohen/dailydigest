@@ -9,6 +9,7 @@ import { runEmbedStage } from "./stages/embed.js";
 import { runEnrichStage } from "./stages/enrich.js";
 import { runExtractStage } from "./stages/extract.js";
 import { runIngestStage } from "./stages/ingest.js";
+import { runLearnStage } from "./stages/learn.js";
 import { runPingStage } from "./stages/ping.js";
 import { runRelevanceStage } from "./stages/relevance.js";
 import { runResearchSummaryStage } from "./stages/researchSummary.js";
@@ -32,6 +33,7 @@ const STAGES: Record<string, Stage> = {
   research_summary: (env, config, date) => runResearchSummaryStage(env, config.models, date),
   compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, date),
   deliver: (env, _config, date) => runDeliverStage(env, date),
+  learn: (env, _config, date) => runLearnStage(env, date),
   create_topic: (env, config, _date, args) => {
     const sentence = args.get("topic");
     if (!sentence) throw new Error('create_topic requires --topic="<one sentence>"');
@@ -45,6 +47,7 @@ const STAGES: Record<string, Stage> = {
 // --all since it needs a --topic argument and is a one-off owner action.
 const ALL_STAGE_ORDER = [
   "seed_sources",
+  "learn",
   "ingest",
   "extract",
   "embed",

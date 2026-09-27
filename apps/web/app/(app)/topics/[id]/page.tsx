@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { computeTopicPrecision, PRECISION_SUGGESTION_THRESHOLD } from "@/lib/precision";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function TopicDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +13,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
     .eq("id", id)
     .maybeSingle();
   if (!topic) notFound();
+
+  const precision = await computeTopicPrecision(supabase, id);
 
   const { data: storyTopics } = await supabase
     .from("story_topics")
@@ -37,6 +40,18 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
         <p style={{ fontSize: 13, color: "#444" }}>TR: {(topic.queries_tr ?? []).join(" | ")}</p>
         <p style={{ fontSize: 13, color: "#444" }}>EN: {(topic.queries_en ?? []).join(" | ")}</p>
         {topic.exclusions?.length > 0 && <p style={{ fontSize: 13, color: "#888" }}>Hariç: {topic.exclusions.join(", ")}</p>}
+      </section>
+
+      <section style={{ margin: "16px 0" }}>
+        <h2 style={{ fontSize: 14 }}>Kesinlik</h2>
+        {precision.precision !== null ? (
+          <p style={{ fontSize: 13, color: precision.precision < PRECISION_SUGGESTION_THRESHOLD ? "#c33" : "#444" }}>
+            Sürülen içeriğin %{Math.round(precision.precision * 100)}&apos;i ilgili işaretlendi ({precision.sampleSize} geri bildirim).
+            {precision.precision < PRECISION_SUGGESTION_THRESHOLD && " Tanımı gözden geçirmeyi düşün."}
+          </p>
+        ) : (
+          <p style={{ fontSize: 13, color: "#888" }}>Henüz yeterli geri bildirim yok.</p>
+        )}
       </section>
 
       <section style={{ margin: "16px 0" }}>

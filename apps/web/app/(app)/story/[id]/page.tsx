@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 interface StoryItemRow {
   items: {
@@ -43,6 +44,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
       {topics.length > 0 && (
         <p style={{ fontSize: 12, color: "#666" }}>{topics.join(" · ")}</p>
       )}
+
+      <FeedbackButtons storyId={story.id} />
 
       {story.summary && (
         <section style={{ margin: "16px 0" }}>

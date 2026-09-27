@@ -2,6 +2,7 @@ import { createServiceRoleClient, type LimitsConfig, type ModelsConfig } from "@
 import { buildRelevancePrompt, callLlm, relevanceSchema } from "@dailydigest/llm";
 import type { Env } from "../env.js";
 import { cosineSimilarity } from "../lib/dedup.js";
+import { fetchFewShotExamples } from "../lib/fewShot.js";
 import { runPool } from "../lib/pool.js";
 
 const PAGE_SIZE = 1000;
@@ -70,6 +71,11 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
     if (!data || data.length < PAGE_SIZE) break;
   }
 
+  const fewShotByTopic = new Map<string, { positive: string[]; negative: string[] }>();
+  for (const topic of topics as TopicRow[]) {
+    fewShotByTopic.set(topic.id, await fetchFewShotExamples(db, env.OWNER_ID, topic.id));
+  }
+
   let scoredPairs = 0;
   let archived = 0;
 
@@ -93,6 +99,8 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
             topicName: topic.name,
             topicDescription: topic.description,
             topicExclusions: topic.exclusions ?? [],
+            positiveExamples: fewShotByTopic.get(topic.id)?.positive,
+            negativeExamples: fewShotByTopic.get(topic.id)?.negative,
           }),
           schema: relevanceSchema,
           modelsConfig: models,
