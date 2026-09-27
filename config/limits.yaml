@@ -1,0 +1,19 @@
+# Budget, thresholds, alert caps. CLAUDE.md rule 1, SPEC.md section 13.
+# All values are starting points; tune once real volumes are observed (M1+).
+
+daily_budget_usd: 5.00
+budget_warning_threshold_pct: 80
+
+max_items_per_source_per_run: 100
+
+thresholds:
+  relevance_default: 5.0
+  cluster_high: 0.90
+  cluster_low: 0.75
+  dedup_simhash_distance: 3
+  dedup_cosine: 0.95
+
+alerts:
+  max_per_day: 3
+  quiet_hours_start: "23:00"
+  quiet_hours_end: "07:00"

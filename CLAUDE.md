@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Working name: **Radar** (personal foreign policy and political science intelligence app). Rename freely.
+Project name: **dailydigest** (personal foreign policy and political science intelligence app).
 
 Read `SPEC.md` before any task. It is the source of truth for scope, data model, pipeline and milestones. If a request conflicts with the spec, flag it before coding.
 

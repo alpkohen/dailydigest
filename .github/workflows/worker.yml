@@ -1,0 +1,52 @@
+name: worker
+
+on:
+  schedule:
+    # 04:30 Europe/Istanbul (UTC+3, no DST) = 01:30 UTC. SPEC.md section 5.
+    # Runs "ping" until real pipeline stages land in M1+; the nightly cron
+    # will be pointed at --all once ingest/extract/etc exist.
+    - cron: "30 1 * * *"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Stage to run (omit + all=true for the full pipeline)"
+        required: false
+        default: "ping"
+      date:
+        description: "YYYY-MM-DD (defaults to today)"
+        required: false
+      all:
+        description: "Run the full pipeline instead of a single stage"
+        required: false
+        default: "false"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run worker
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+        run: |
+          if [ "${{ github.event.inputs.all }}" = "true" ]; then
+            pnpm worker:run --all
+          else
+            pnpm worker:run --stage="${{ github.event.inputs.stage || 'ping' }}" --date="${{ github.event.inputs.date }}"
+          fi

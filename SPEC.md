@@ -1,10 +1,10 @@
-# Radar: Product and Technical Specification
+# dailydigest: Product and Technical Specification
 
 Version 1.0 | Owner: Alp | Status: ready for build
 
 ## 1. Purpose
 
-Radar is a personal intelligence desk for foreign policy and political science. Every night it reads domestic and international news, think tank output and academic journals, keeps only what matters for the owner's topics and questions, groups coverage of the same event across outlets and languages, and produces a Turkish morning brief by email plus a richer web app for depth, history and questions.
+dailydigest is a personal intelligence desk for foreign policy and political science. Every night it reads domestic and international news, think tank output and academic journals, keeps only what matters for the owner's topics and questions, groups coverage of the same event across outlets and languages, and produces a Turkish morning brief by email plus a richer web app for depth, history and questions.
 
 It is not a news feed. The unit of value is a **story** (one development, many sources), explained in context, compared across perspectives and remembered over time.
 
@@ -258,7 +258,7 @@ Indexes: HNSW on embeddings, GIN full text on items (Turkish and English configs
 ## 9. Email
 
 - React Email templates: daily, weekly, alert. Turkish copy. Plain-text alternative always included.
-- Subject pattern: `Radar | 27 Eylül | 3 kritik gelişme` (numbers and counts from data).
+- Subject pattern: `dailydigest | 27 Eylül | 3 kritik gelişme` (numbers and counts from data).
 - Width and typography for comfortable phone reading; no images required; dark-mode safe.
 - Signed feedback links (HMAC, expiry 14 days) hit an API route and redirect to a small confirmation page.
 - Deliverability: verified sending domain, SPF, DKIM, DMARC.

@@ -1,0 +1,43 @@
+# Roles -> provider/model. CLAUDE.md rule 1: never hardcode model names in
+# application code, they live here. SPEC.md section 7 lists Anthropic as the
+# default with OpenAI optional per role; this project runs OpenAI-only by
+# owner choice, which the spec explicitly supports as a config-only change.
+#
+# embedding.model is a PROVISIONAL placeholder pending the M2 embedding eval
+# (SPEC.md section 12, /evals/embeddings). Its dimensions value must match
+# the vector(...) column width used in packages/db/migrations — currently
+# 1024.
+
+roles:
+  fast:
+    provider: openai
+    model: gpt-6-luna
+  mid:
+    provider: openai
+    model: gpt-6-sol
+  strong:
+    provider: openai
+    model: gpt-6-astra
+
+embedding:
+  provider: openai
+  model: text-embedding-3-large
+  dimensions: 1024
+
+# Prices are owner-maintained; used to compute cost_usd on every llm_calls
+# row. Verify against https://platform.openai.com/docs/pricing periodically.
+prices_per_million_tokens:
+  gpt-6-luna:
+    input: 0.10
+    output: 0.50
+  gpt-6-sol:
+    input: 2.00
+    output: 10.00
+  gpt-6-astra:
+    input: 10.00
+    output: 50.00
+
+fallbacks:
+  strong:
+    provider: openai
+    model: gpt-6-sol

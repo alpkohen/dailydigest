@@ -1,0 +1,18 @@
+{
+  "name": "dailydigest",
+  "private": true,
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @dailydigest/web dev",
+    "worker:run": "pnpm --filter @dailydigest/worker run start",
+    "eval": "pnpm --filter @dailydigest/evals run start",
+    "db:migrate": "pnpm --filter @dailydigest/db run migrate",
+    "lint": "pnpm -r --if-present run lint",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test"
+  },
+  "packageManager": "pnpm@12.6.0"
+}
