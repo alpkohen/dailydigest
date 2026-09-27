@@ -27,28 +27,28 @@ sources:
   - { name: "Yeni Şafak", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.5, url: "https://www.yenisafak.com/rss?xml=gundem" }
   - { name: "TRT Haber", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.6, url: "https://www.trthaber.com/manset_articles.rss" }
   - { name: "Hürriyet", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.6, url: "https://www.hurriyet.com.tr/rss/anasayfa" }
-  - { name: "T24", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: null } # TODO: site is behind a Cloudflare bot challenge, no feed could be verified, needs manual check
+  - { name: "T24", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: null } # verified 2026-09-27: site loads fine (not bot-walled), no RSS link anywhere in <head> or page body
   - { name: "Medyascope", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: "https://medyascope.tv/feed/" }
-  - { name: "Gazete Oksijen", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: null } # TODO: no public RSS found, needs manual check
+  - { name: "Gazete Oksijen", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: null } # verified 2026-09-27: no RSS found, /feed and /rss both 404
   - { name: "Cumhuriyet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: "https://www.cumhuriyet.com.tr/rss" }
   - { name: "Serbestiyet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: "https://serbestiyet.com/feed/" }
-  - { name: "Karar", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: null } # TODO: no public RSS found, needs manual check
+  - { name: "Karar", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: "https://www.karar.com/service/rss.php" } # verified 2026-09-27: 40 items
   - { name: "BBC Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.8, url: "https://feeds.bbci.co.uk/turkce/rss.xml" }
   - { name: "DW Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.8, url: "https://rss.dw.com/rdf/rss-tur-all" }
   - { name: "Euronews Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.6, url: "https://tr.euronews.com/rss" }
   - { name: "Independent Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.6, url: "https://www.indyturk.com/rss.xml" }
 
   # Turkish think tanks
-  - { name: "EDAM", type: rss, lang: tr, group: academic, weight: 0.9, url: null } # TODO: site's own /feed/ endpoint returns a server error, no working feed found, needs manual check
-  - { name: "SETA", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.8, url: null } # TODO: no public RSS found (root /rss and /feed/ both 404), needs manual check
-  - { name: "İstanbul Politikalar Merkezi (IPC)", type: rss, lang: tr, group: academic, weight: 0.9, url: null } # TODO: no public RSS found, needs manual check
-  - { name: "TEPAV", type: rss, lang: tr, group: academic, weight: 0.8, url: null } # TODO: no public RSS found, needs manual check
-  - { name: "ORSAM", type: rss, lang: tr, group: academic, weight: 0.8, url: null } # TODO: feed exists (https://orsam.org.tr/rss) but currently returns zero items, needs manual check
+  - { name: "EDAM", type: rss, lang: tr, group: academic, weight: 0.9, url: null } # verified 2026-09-27: /feed/ and /rss both return HTTP 500, genuinely broken server-side
+  - { name: "SETA", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.8, url: null } # verified 2026-09-27: no RSS found, /rss, /feed, /rss.xml all 404
+  - { name: "İstanbul Politikalar Merkezi (IPC)", type: rss, lang: tr, group: academic, weight: 0.9, url: null } # verified 2026-09-27: no RSS found, /feed/ and /rss both 404
+  - { name: "TEPAV", type: rss, lang: tr, group: academic, weight: 0.8, url: null } # verified 2026-09-27: no RSS found anywhere on the site
+  - { name: "ORSAM", type: rss, lang: tr, group: academic, weight: 0.8, url: "https://orsam.org.tr/rss" } # verified 2026-09-27: valid RSS channel, but zero <item>s published; wired in case they resume publishing
   - { name: "Dış Politika Enstitüsü", type: rss, lang: tr, group: academic, weight: 0.7, url: "https://foreignpolicy.org.tr/feed/" }
   - { name: "Perspektif", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: "https://www.perspektif.online/feed/" }
 
   # International news
-  - { name: "Reuters World", type: rss, lang: en, group: western, weight: 1.0, url: null } # TODO: Reuters discontinued public RSS feeds in 2020, no working feed found, needs manual check
+  - { name: "Reuters World", type: rss, lang: en, group: western, weight: 1.0, url: null } # verified 2026-09-27: Reuters discontinued public RSS in 2020; no working direct or third-party mirror feed found. A Google News site-scoped RSS workaround exists (news.google.com/rss/search?q=site:reuters.com) but its article links are Google redirect URLs, not direct reuters.com URLs, and extract.ts is not built to resolve those - needs a deliberate decision, not a silent swap
   - { name: "AP International", type: rss, lang: en, group: western, weight: 1.0, url: "https://feedx.net/rss/ap.xml" } # AP removed its own public RSS; this is a verified third-party full-text mirror
   - { name: "Financial Times World", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://www.ft.com/world?format=rss" }
   - { name: "The Economist", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://www.economist.com/international/rss.xml" }
@@ -69,19 +69,19 @@ sources:
   - { name: "Foreign Affairs", type: rss, lang: en, group: western, weight: 1.0, paywalled: true, url: "https://www.foreignaffairs.com/rss.xml" }
   - { name: "Foreign Policy", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://foreignpolicy.com/feed/" }
   - { name: "War on the Rocks", type: rss, lang: en, group: western, weight: 0.9, url: "https://warontherocks.com/feed/" }
-  - { name: "Lawfare", type: rss, lang: en, group: western, weight: 0.8, url: null } # TODO: site is behind a Cloudflare bot challenge, no feed could be verified, needs manual check
+  - { name: "Lawfare", type: rss, lang: en, group: western, weight: 0.8, url: null } # verified 2026-09-27: site moved to lawfaremedia.org, no feed anywhere (not bot-walled, genuinely doesn't exist)
   - { name: "The National Interest", type: rss, lang: en, group: western, weight: 0.7, url: "https://nationalinterest.org/feed" }
   - { name: "Survival (IISS)", type: rss, lang: en, group: academic, weight: 0.9, url: "https://www.tandfonline.com/feed/rss/tsur20" }
 
   # International think tanks
-  - { name: "Carnegie Endowment", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: site rebuilt on Next.js, no working XML feed found, needs manual check
-  - { name: "Brookings", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: /feed/ redirects to the homepage and the old webfeeds.brookings.edu domain no longer resolves, needs manual check
+  - { name: "Carnegie Endowment", type: rss, lang: en, group: western, weight: 0.9, url: null } # verified 2026-09-27: confirmed rebuilt on Next.js, no XML feed exists anywhere on the site
+  - { name: "Brookings", type: rss, lang: en, group: western, weight: 0.9, url: null } # verified 2026-09-27: /feed/, /feed/rss2/, /?feed=rss2 all silently redirect to the homepage; no working feed exists despite the advertised <link rel="alternate"> tag
   - { name: "Council on Foreign Relations", type: rss, lang: en, group: western, weight: 0.9, url: "https://feeds.cfr.org/publication" }
-  - { name: "CSIS", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: site is behind a Cloudflare bot challenge, no feed could be verified, needs manual check
+  - { name: "CSIS", type: rss, lang: en, group: western, weight: 0.9, url: "https://www.csis.org/rss.xml" } # verified 2026-09-27: 10 items, not actually behind Cloudflare
   - { name: "Atlantic Council", type: rss, lang: en, group: western, weight: 0.8, url: "https://www.atlanticcouncil.org/feed/" }
-  - { name: "Chatham House", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: site is behind a Cloudflare bot challenge, no feed could be verified, needs manual check
-  - { name: "ECFR", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: ECFR's own /feeds/ page documents https://ecfr.eu/feed/ but it is behind a Cloudflare bot challenge and could not be verified, needs manual check
-  - { name: "IISS", type: rss, lang: en, group: western, weight: 0.9, url: null } # TODO: site is behind a Cloudflare bot challenge, no feed could be verified, needs manual check
+  - { name: "Chatham House", type: rss, lang: en, group: western, weight: 0.9, url: "https://www.chathamhouse.org/path/whatsnew.xml" } # verified 2026-09-27: 50 items; the site's own /rss-feeds page lists this and 3 narrower feeds
+  - { name: "ECFR", type: rss, lang: en, group: western, weight: 0.9, url: null } # verified 2026-09-27: /feed/ returns 403 even from a real browser session, confirmed genuinely bot-walled
+  - { name: "IISS", type: rss, lang: en, group: western, weight: 0.9, url: null } # verified 2026-09-27: /rss, /feed, /online-analysis/rss all return 403 even from a real browser session, confirmed genuinely bot-walled
   - { name: "RUSI", type: rss, lang: en, group: western, weight: 0.8, url: "https://rusi.org/rss/latest-publications.xml" }
   - { name: "SWP Berlin", type: rss, lang: en, group: western, weight: 0.9, url: "https://www.swp-berlin.org/en/SWPPublications.xml" }
   - { name: "International Crisis Group", type: rss, lang: en, group: western, weight: 0.9, url: "https://www.crisisgroup.org/rss.xml" }
