@@ -237,7 +237,7 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
 
   const { data: topics, error: topicsError } = await db
     .from("topics")
-    .select("id, queries_en")
+    .select("id, queries_tr, queries_en")
     .eq("owner_id", env.OWNER_ID)
     .eq("active", true);
   if (topicsError) throw new Error(`Failed to load topics: ${topicsError.message}`);
@@ -251,11 +251,17 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
     sourceId: s.id,
   }));
 
+  // SPEC.md section 4.1/4.5: a topic's drafted queries (both languages)
+  // are what drives the Exa/GDELT search expansion, not just one query.
   for (const topic of topics ?? []) {
-    const query = (topic.queries_en as string[] | null)?.[0];
-    if (!query) continue;
-    if (gdeltSource) payloads.push({ kind: "gdelt", sourceId: gdeltSource.id, topicId: topic.id, query });
-    if (exaSource) payloads.push({ kind: "exa", sourceId: exaSource.id, topicId: topic.id, query });
+    const queries = [
+      ...((topic.queries_tr as string[] | null) ?? []),
+      ...((topic.queries_en as string[] | null) ?? []),
+    ];
+    for (const query of new Set(queries)) {
+      if (gdeltSource) payloads.push({ kind: "gdelt", sourceId: gdeltSource.id, topicId: topic.id, query });
+      if (exaSource) payloads.push({ kind: "exa", sourceId: exaSource.id, topicId: topic.id, query });
+    }
   }
 
   await enqueueJobs(db, { ownerId: env.OWNER_ID, runId: run.id, stage: "ingest", payloads });

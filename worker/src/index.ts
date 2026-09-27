@@ -1,5 +1,6 @@
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
+import { runClusterStage } from "./stages/cluster.js";
 import { runCreateTopicStage } from "./stages/createTopic.js";
 import { runDedupStage } from "./stages/dedup.js";
 import { runEmbedStage } from "./stages/embed.js";
@@ -20,6 +21,7 @@ const STAGES: Record<string, Stage> = {
   embed: (env, config, date) => runEmbedStage(env, config.models, date),
   dedup: (env, config, date) => runDedupStage(env, config.limits, date),
   relevance: (env, config, date) => runRelevanceStage(env, config.models, config.limits, date),
+  cluster: (env, config, date) => runClusterStage(env, config.models, config.limits, date),
   create_topic: (env, config, _date, args) => {
     const sentence = args.get("topic");
     if (!sentence) throw new Error('create_topic requires --topic="<one sentence>"');
@@ -30,7 +32,7 @@ const STAGES: Record<string, Stage> = {
 // Order matters for --all: sources before ingest, items before
 // extract/embed/dedup/relevance. create_topic is deliberately excluded from
 // --all since it needs a --topic argument and is a one-off owner action.
-const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract", "embed", "dedup", "relevance"];
+const ALL_STAGE_ORDER = ["seed_sources", "ingest", "extract", "embed", "dedup", "relevance", "cluster"];
 
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();

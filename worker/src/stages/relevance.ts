@@ -2,8 +2,10 @@ import { createServiceRoleClient, type LimitsConfig, type ModelsConfig } from "@
 import { buildRelevancePrompt, callLlm, relevanceSchema } from "@dailydigest/llm";
 import type { Env } from "../env.js";
 import { cosineSimilarity } from "../lib/dedup.js";
+import { runPool } from "../lib/pool.js";
 
 const PAGE_SIZE = 1000;
+const CONCURRENCY = 15;
 
 interface TopicRow {
   id: string;
@@ -71,8 +73,8 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
   let scoredPairs = 0;
   let archived = 0;
 
-  for (const item of items) {
-    if (!item.embedding) continue;
+  await runPool(items, CONCURRENCY, async (item) => {
+    if (!item.embedding) return;
     let clearedAnyThreshold = false;
 
     for (const topic of topics as TopicRow[]) {
@@ -123,7 +125,7 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
     const newStatus = clearedAnyThreshold ? "scored" : "not_relevant";
     if (newStatus === "not_relevant") archived++;
     await db.from("items").update({ status: newStatus }).eq("id", item.id);
-  }
+  });
 
   await db
     .from("pipeline_runs")
