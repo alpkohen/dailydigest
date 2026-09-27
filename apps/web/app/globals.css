@@ -623,9 +623,11 @@ textarea {
   gap: 8px;
 }
 
-.crumb-sep {
-  margin: 0 6px;
-  color: var(--border-strong);
+.top-meta-tagline {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--text-dim);
 }
 
 .top-meta-status {
@@ -691,8 +693,9 @@ textarea {
   background: none;
   border: none;
   padding: 0 0 10px;
-  font-size: 13px;
-  color: var(--text-faint);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-dim);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -910,17 +913,6 @@ a.feed-headline:hover {
   margin: 4px 0 4px;
 }
 
-.page-tagline {
-  text-align: center;
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 17px;
-  line-height: 1.4;
-  color: var(--text-faint);
-  border-top: 1px solid var(--border);
-  margin-top: 48px;
-  padding-top: 28px;
-}
 
 /* AI provenance tag */
 

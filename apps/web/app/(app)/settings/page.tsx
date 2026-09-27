@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { loadWebConfig } from "@/lib/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { IconArrowRight, IconSpark } from "@/components/icons";
 import { SettingsForm } from "./SettingsForm";
 
 export default async function SettingsPage() {
@@ -13,7 +15,7 @@ export default async function SettingsPage() {
     .maybeSingle();
 
   const quietHours = (profile?.quiet_hours as { start: string; end: string } | null) ?? { start: "23:00", end: "07:00" };
-  const { models, limits } = await loadWebConfig();
+  const { limits } = await loadWebConfig();
 
   return (
     <main>
@@ -31,29 +33,16 @@ export default async function SettingsPage() {
       </div>
 
       <section className="section">
-        <h2 className="h2-section">Models per role</h2>
-        <p className="row-meta" style={{ margin: "0 0 12px" }}>Set via config/models.yaml; shown here read-only.</p>
-        <div className="table-wrap">
-          <table className="table">
-            <tbody>
-              <tr>
-                <td className="text-faint">fast</td>
-                <td>{models.roles.fast.provider} / {models.roles.fast.model}</td>
-              </tr>
-              <tr>
-                <td className="text-faint">mid</td>
-                <td>{models.roles.mid.provider} / {models.roles.mid.model}</td>
-              </tr>
-              <tr>
-                <td className="text-faint">strong</td>
-                <td>{models.roles.strong.provider} / {models.roles.strong.model}</td>
-              </tr>
-              <tr>
-                <td className="text-faint">embedding</td>
-                <td>{models.embedding.provider} / {models.embedding.model}</td>
-              </tr>
-            </tbody>
-          </table>
+        <h2 className="h2-section">AI</h2>
+        <div className="rail-card-v2" style={{ maxWidth: 420 }}>
+          <p className="rail-card-desc" style={{ marginBottom: 12 }}>
+            See which model wrote what, how many calls the app has made, and what it has cost.
+          </p>
+          <Link href="/ai-activity" className="rail-card-link">
+            <IconSpark />
+            View AI Activity
+            <IconArrowRight />
+          </Link>
         </div>
       </section>
     </main>

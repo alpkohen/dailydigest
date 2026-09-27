@@ -171,9 +171,7 @@ export function TodayView({
   return (
     <div>
       <div className="top-meta">
-        <span>
-          Workspace<span className="crumb-sep">/</span>Today
-        </span>
+        <span className="top-meta-tagline">The world&apos;s daily briefing, minus the drama.</span>
         <span className="top-meta-status">
           <span className="status-dot" />
           Today&apos;s edition
@@ -353,8 +351,6 @@ export function TodayView({
           </aside>
         )}
       </div>
-
-      <p className="page-tagline">Not more news. A better perspective.</p>
     </div>
   );
 }
