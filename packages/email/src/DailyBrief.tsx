@@ -1,4 +1,4 @@
-import { Body, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
+import { Body, Container, Head, Heading, Hr, Html, Img, Preview, Section, Text } from "@react-email/components";
 // Explicit default import so this still works under the classic JSX
 // transform: tsx's on-the-fly transform of this cross-package file doesn't
 // reliably pick up packages/email's own tsconfig "jsx": "react-jsx".
@@ -20,99 +20,180 @@ export interface BriefContent {
   watchlist?: { id: string; title: string; url: string; watchName: string }[];
 }
 
-const SECTION_TITLES: Record<BriefContent["sections"][number]["section"], string> = {
-  critical: "Kritik gelişmeler",
-  follow_up: "Takip edilen gelişmeler",
-  worth_reading: "Okumaya değer",
-  new_research: "Yeni araştırma",
+// Same brand palette as the web app (apps/web/app/globals.css), hardcoded
+// since email clients don't reliably support CSS custom properties.
+const COLORS = {
+  bg: "#10141a",
+  panel: "#171b22",
+  panelAlt: "#1d222c",
+  border: "#262c36",
+  text: "#ece7dc",
+  textDim: "#9aa1ad",
+  textFaint: "#6b7280",
+  accent: "#4f9c86",
+  amber: "#d9a441",
+  violet: "#9b8cd9",
 };
 
+const SECTION_META: Record<
+  BriefContent["sections"][number]["section"],
+  { title: string; color: string }
+> = {
+  critical: { title: "Critical", color: COLORS.amber },
+  follow_up: { title: "Follow-up", color: COLORS.accent },
+  worth_reading: { title: "Worth reading", color: COLORS.textFaint },
+  new_research: { title: "New research", color: COLORS.violet },
+};
+
+const LOGO_URL = "https://world-brief.netlify.app/brand/world-brief-mark.webp";
+
 /**
- * SPEC.md section 9: React Email, Turkish copy, short and scannable for
- * phone reading, no images required, dark-mode safe (uses system colours,
- * no hardcoded light backgrounds only). Section order follows section 4.7:
- * headline, critical, follow-up, worth reading, new research. Watchlist,
- * outside-radar and question-pulse sections are M7 features, added once
- * that data exists.
+ * SPEC.md section 9: React Email, Turkish copy for generated content, short
+ * and scannable for phone reading, no images required beyond the wordmark.
+ * Matches the web app's dark editorial theme (apps/web/app/globals.css) so
+ * the email and the app read as the same product. Inline styles throughout
+ * rather than a <style> block: the safest approach across Gmail/Outlook/
+ * Apple Mail, none of which reliably apply external or <head> CSS.
  */
 export function DailyBrief({ content, dateLabel }: { content: BriefContent; dateLabel: string }): ReactElement {
   return (
-    <Html lang="tr">
-      <Head />
+    <Html lang="en">
+      <Head>
+        <meta name="color-scheme" content="dark" />
+        <meta name="supported-color-schemes" content="dark" />
+      </Head>
       <Preview>{content.headline}</Preview>
-      <Body style={{ backgroundColor: "#ffffff", fontFamily: "-apple-system, Helvetica, Arial, sans-serif", color: "#1a1a1a" }}>
-        <Container style={{ maxWidth: 600, margin: "0 auto", padding: "24px 16px" }}>
-          <Heading as="h1" style={{ fontSize: 20, marginBottom: 4 }}>
-            dailydigest
-          </Heading>
-          <Text style={{ fontSize: 13, color: "#666666", marginTop: 0 }}>{dateLabel}</Text>
+      <Body style={{ backgroundColor: COLORS.bg, fontFamily: "-apple-system, Helvetica, Arial, sans-serif", margin: 0, padding: "24px 0" }}>
+        <Container
+          style={{
+            maxWidth: 600,
+            margin: "0 auto",
+            backgroundColor: COLORS.panel,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: 8,
+            padding: "32px 28px",
+          }}
+        >
+          <Img src={LOGO_URL} alt="World Brief." width="220" style={{ height: "auto", display: "block" }} />
+          <Text style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: COLORS.accent, margin: "10px 0 0" }}>
+            The world&apos;s daily briefing, minus the drama.
+          </Text>
 
-          <Section style={{ margin: "16px 0" }}>
-            <Text style={{ fontSize: 15, lineHeight: "22px" }}>{content.headline}</Text>
+          <Text style={{ fontSize: 12, color: COLORS.textFaint, margin: "20px 0 4px", textTransform: "uppercase", letterSpacing: 1 }}>
+            {dateLabel}
+          </Text>
+
+          <Section style={{ margin: "12px 0 24px" }}>
+            <Text style={{ fontSize: 14, lineHeight: "21px", color: COLORS.textDim, margin: 0 }}>{content.headline}</Text>
           </Section>
 
           {content.sections
             .filter((section) => section.items.length > 0)
-            .map((section) => (
-              <Section key={section.section} style={{ margin: "20px 0" }}>
-                <Heading as="h2" style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>
-                  {SECTION_TITLES[section.section]}
-                </Heading>
-                {section.items.map((item) => (
-                  <div key={item.id} style={{ margin: "10px 0" }}>
-                    <Text style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{item.title}</Text>
-                    <Text style={{ fontSize: 13, lineHeight: "19px", color: "#333333", margin: 0 }}>
-                      {item.summary ?? item.argument}
-                    </Text>
-                    {item.links && (
-                      <Text style={{ fontSize: 11, margin: "4px 0 0" }}>
-                        <a href={item.links.save} style={{ color: "#666" }}>
-                          Kaydet
-                        </a>
-                        {" · "}
-                        <a href={item.links.notRelevant} style={{ color: "#666" }}>
-                          İlgisiz
-                        </a>
-                        {" · "}
-                        <a href={item.links.lessLikeThis} style={{ color: "#666" }}>
-                          Bunun gibi az göster
-                        </a>
+            .map((section) => {
+              const meta = SECTION_META[section.section];
+              return (
+                <Section key={section.section} style={{ margin: "24px 0" }}>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                      color: meta.color,
+                      borderBottom: `2px solid ${meta.color}`,
+                      paddingBottom: 6,
+                      margin: "0 0 14px",
+                      display: "inline-block",
+                    }}
+                  >
+                    {meta.title}
+                  </Text>
+                  {section.items.map((item) => (
+                    <div key={item.id} style={{ margin: "0 0 16px" }}>
+                      <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
+                        {item.title}
                       </Text>
-                    )}
-                  </div>
-                ))}
-                <Hr style={{ borderColor: "#eeeeee" }} />
-              </Section>
-            ))}
+                      <Text style={{ fontSize: 13, lineHeight: "19px", color: COLORS.textDim, margin: 0 }}>
+                        {item.summary ?? item.argument}
+                      </Text>
+                      {item.links && (
+                        <Text style={{ fontSize: 11, margin: "6px 0 0" }}>
+                          <a href={item.links.save} style={{ color: COLORS.accent, textDecoration: "none" }}>
+                            Save
+                          </a>
+                          <span style={{ color: COLORS.border }}> · </span>
+                          <a href={item.links.notRelevant} style={{ color: COLORS.textFaint, textDecoration: "none" }}>
+                            Not relevant
+                          </a>
+                          <span style={{ color: COLORS.border }}> · </span>
+                          <a href={item.links.lessLikeThis} style={{ color: COLORS.textFaint, textDecoration: "none" }}>
+                            Show less like this
+                          </a>
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                  <Hr style={{ borderColor: COLORS.border, marginTop: 8 }} />
+                </Section>
+              );
+            })}
 
           {content.watchlist && content.watchlist.length > 0 && (
-            <Section style={{ margin: "20px 0" }}>
-              <Heading as="h2" style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>
-                Takip listenden
-              </Heading>
+            <Section style={{ margin: "24px 0" }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  color: COLORS.textFaint,
+                  borderBottom: `2px solid ${COLORS.border}`,
+                  paddingBottom: 6,
+                  margin: "0 0 14px",
+                  display: "inline-block",
+                }}
+              >
+                From your watchlist
+              </Text>
               {content.watchlist.map((w) => (
-                <Text key={w.id} style={{ fontSize: 13, margin: "6px 0" }}>
-                  <a href={w.url} style={{ color: "#1a1a1a" }}>
+                <Text key={w.id} style={{ fontSize: 13, margin: "8px 0" }}>
+                  <a href={w.url} style={{ color: COLORS.text, textDecoration: "none" }}>
                     {w.title}
                   </a>
-                  <span style={{ color: "#999", fontSize: 11 }}> — {w.watchName}</span>
+                  <span style={{ color: COLORS.textFaint, fontSize: 11 }}> — {w.watchName}</span>
                 </Text>
               ))}
-              <Hr style={{ borderColor: "#eeeeee" }} />
+              <Hr style={{ borderColor: COLORS.border, marginTop: 8 }} />
             </Section>
           )}
 
           {content.outsideRadar && (
-            <Section style={{ margin: "20px 0" }}>
-              <Heading as="h2" style={{ fontSize: 16, borderBottom: "1px solid #e5e5e5", paddingBottom: 6 }}>
-                Radarının dışında
-              </Heading>
-              <Text style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{content.outsideRadar.title}</Text>
-              <Text style={{ fontSize: 13, color: "#333", margin: 0 }}>{content.outsideRadar.reason}</Text>
+            <Section style={{ margin: "24px 0" }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  color: COLORS.textFaint,
+                  borderBottom: `2px solid ${COLORS.border}`,
+                  paddingBottom: 6,
+                  margin: "0 0 14px",
+                  display: "inline-block",
+                }}
+              >
+                Outside your radar
+              </Text>
+              <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
+                {content.outsideRadar.title}
+              </Text>
+              <Text style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>{content.outsideRadar.reason}</Text>
             </Section>
           )}
 
-          <Text style={{ fontSize: 11, color: "#999999", marginTop: 24 }}>dailydigest, kişisel dış politika istihbarat masası.</Text>
+          <Text style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 28, textAlign: "center" }}>
+            World Brief. The world&apos;s daily briefing, minus the drama.
+          </Text>
         </Container>
       </Body>
     </Html>

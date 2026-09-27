@@ -26,21 +26,16 @@ function withFeedbackLinks(content: BriefContent, env: Env): BriefContent {
   };
 }
 
-const DAY_NAMES_TR = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
-const MONTH_NAMES_TR = [
-  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
-];
-
 function formatDateLabel(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
-  return `${DAY_NAMES_TR[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_NAMES_TR[d.getUTCMonth()]}`;
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
 function subjectFor(content: BriefContent, dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
+  const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
   const critical = content.sections.find((s: BriefContent["sections"][number]) => s.section === "critical")?.items.length ?? 0;
-  return `dailydigest | ${d.getUTCDate()} ${MONTH_NAMES_TR[d.getUTCMonth()]} | ${critical} kritik gelişme`;
+  return `World Brief | ${day} | ${critical} critical`;
 }
 
 /**
@@ -78,7 +73,7 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
 
   const resend = new Resend(env.RESEND_API_KEY);
   const result = await resend.emails.send({
-    from: env.RESEND_FROM_EMAIL ?? "dailydigest <onboarding@resend.dev>",
+    from: env.RESEND_FROM_EMAIL ?? "World Brief <onboarding@resend.dev>",
     to: env.BRIEF_RECIPIENT_EMAIL,
     subject: subjectFor(content, date),
     html,
