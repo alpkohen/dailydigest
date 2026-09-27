@@ -15,7 +15,7 @@ export default async function FeedbackConfirmedPage({
 
   return (
     <main style={{ padding: "80px 24px", textAlign: "center" }}>
-      <h1 className="h1-serif">World Brief.</h1>
+      <h1 className="h1-serif">dailydigest.</h1>
       {ok === "true" ? (
         <p className="dek" style={{ color: "var(--text)" }}>{(signal && SIGNAL_LABELS[signal]) ?? "Geri bildirimin kaydedildi."}</p>
       ) : (

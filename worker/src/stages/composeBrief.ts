@@ -8,6 +8,7 @@ interface OutsideRadarPick {
   title: string;
   standfirst: string | null;
   reason: string;
+  url: string;
 }
 
 async function pickOutsideRadar(
@@ -20,7 +21,7 @@ async function pickOutsideRadar(
 
   const { data: candidates } = await db
     .from("items")
-    .select("id, title, standfirst")
+    .select("id, title, standfirst, url")
     .eq("owner_id", env.OWNER_ID)
     .eq("status", "not_relevant")
     .order("created_at", { ascending: false })
@@ -44,7 +45,7 @@ async function pickOutsideRadar(
     if (!result.pick_id) return null;
     const picked = candidates.find((c) => c.id === result.pick_id);
     if (!picked) return null;
-    return { id: picked.id, title: picked.title, standfirst: picked.standfirst, reason: result.reason };
+    return { id: picked.id, title: picked.title, standfirst: picked.standfirst, reason: result.reason, url: picked.url };
   } catch (err) {
     console.error(`compose_brief: outside_radar failed: ${(err as Error).message}`);
     return null;
@@ -77,6 +78,7 @@ interface StoryRow {
 
 interface ResearchRow {
   id: string;
+  item_id: string;
   argument: string | null;
   items: { title: string } | null;
 }
@@ -132,7 +134,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const { data: researchRows, error: researchError } = await db
     .from("research_items")
-    .select("id, argument, items(title)")
+    .select("id, item_id, argument, items(title)")
     .eq("owner_id", env.OWNER_ID)
     .not("argument", "is", null);
   if (researchError) throw new Error(`Failed to load research_items: ${researchError.message}`);
@@ -201,7 +203,12 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
       section: section.section,
       items:
         section.section === "new_research"
-          ? section.story_ids.map((id) => ({ id, title: researchById.get(id)?.items?.title, argument: researchById.get(id)?.argument }))
+          ? section.story_ids.map((id) => ({
+              id,
+              title: researchById.get(id)?.items?.title,
+              argument: researchById.get(id)?.argument,
+              itemId: researchById.get(id)?.item_id,
+            }))
           : section.story_ids.map((id) => ({ id, title: storyById.get(id)?.title, summary: storyById.get(id)?.summary })),
     })),
     outsideRadar,

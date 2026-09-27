@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { saveItemToReadingListAction, saveStoryToReadingListAction } from "@/app/(app)/todayActions";
+import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
+import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
 
 export interface TodayStory {
   id: string;
@@ -10,17 +13,22 @@ export interface TodayStory {
   tier: number;
   section: string;
   topics: string[];
+  whyItMatters?: string | null;
+  sourceCount?: number;
+  perspectiveCount?: number;
 }
 
 export interface TodayResearchItem {
   id: string;
   title: string;
   argument: string;
+  itemId?: string;
 }
 
 export interface TodayOutsideRadar {
   title: string;
   reason: string;
+  url?: string;
 }
 
 export interface TodayWatchlistItem {
@@ -30,25 +38,76 @@ export interface TodayWatchlistItem {
   watchName: string;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  critical: "Kritik gelişmeler",
-  follow_up: "Takip edilen gelişmeler",
-  worth_reading: "Okumaya değer",
-};
+export interface TodayQuestionWidget {
+  questionId: string;
+  text: string;
+  note: string;
+  storyId: string;
+  storyTitle: string;
+}
 
-const SECTION_BADGE: Record<string, string> = {
-  critical: "badge-critical",
-  follow_up: "badge-accent",
-  worth_reading: "badge-neutral",
-};
+type TabKey = "all" | "critical" | "follow_up" | "research";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "all", label: "Tüm gelişmeler" },
+  { key: "critical", label: "Kritik" },
+  { key: "follow_up", label: "Takip" },
+  { key: "research", label: "Araştırma" },
+];
 
 function formatEdition(periodDate: string) {
   try {
-    const d = new Date(periodDate);
-    return d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+    return new Date(periodDate).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }).toUpperCase();
   } catch {
     return periodDate;
   }
+}
+
+function estimateReadMinutes(stories: TodayStory[], research: TodayResearchItem[]) {
+  const words = stories.reduce((n, s) => n + s.summary.split(/\s+/).length, 0) + research.reduce((n, r) => n + r.argument.split(/\s+/).length, 0);
+  return Math.max(3, Math.round(words / 200));
+}
+
+function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initiallySaved: boolean }) {
+  const [saved, setSaved] = useState(initiallySaved);
+  const [pending, startTransition] = useTransition();
+
+  if (saved) {
+    return (
+      <span className="save-btn saved">
+        <IconBookmark filled />
+        Kaydedildi
+      </span>
+    );
+  }
+
+  return (
+    <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveStoryToReadingListAction(storyId); setSaved(true); })}>
+      <IconBookmark />
+      Kaydet
+    </button>
+  );
+}
+
+function SaveItemButton({ itemId, initiallySaved }: { itemId: string; initiallySaved: boolean }) {
+  const [saved, setSaved] = useState(initiallySaved);
+  const [pending, startTransition] = useTransition();
+
+  if (saved) {
+    return (
+      <span className="save-btn saved">
+        <IconBookmark filled />
+        Kaydedildi
+      </span>
+    );
+  }
+
+  return (
+    <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveItemToReadingListAction(itemId); setSaved(true); })}>
+      <IconBookmark />
+      Kaydet
+    </button>
+  );
 }
 
 export function TodayView({
@@ -58,6 +117,10 @@ export function TodayView({
   research,
   outsideRadar,
   watchlist,
+  questionWidget,
+  briefTime,
+  savedStoryIds,
+  savedItemIds,
 }: {
   periodDate: string;
   headline: string;
@@ -65,127 +128,219 @@ export function TodayView({
   research: TodayResearchItem[];
   outsideRadar?: TodayOutsideRadar | null;
   watchlist?: TodayWatchlistItem[];
+  questionWidget?: TodayQuestionWidget | null;
+  briefTime?: string;
+  savedStoryIds: string[];
+  savedItemIds: string[];
 }) {
-  const [tierFilter, setTierFilter] = useState<number | "all">("all");
+  const [tab, setTab] = useState<TabKey>("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
 
   const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
+  const savedStorySet = useMemo(() => new Set(savedStoryIds), [savedStoryIds]);
+  const savedItemSet = useMemo(() => new Set(savedItemIds), [savedItemIds]);
 
-  const filtered = stories.filter(
-    (s) => (tierFilter === "all" || s.tier === tierFilter) && (topicFilter === "all" || s.topics.includes(topicFilter)),
-  );
+  const topicFiltered = stories.filter((s) => topicFilter === "all" || s.topics.includes(topicFilter));
 
-  const bySection = ["critical", "follow_up", "worth_reading"].map((section) => ({
-    section,
-    stories: filtered.filter((s) => s.section === section),
-  }));
+  const tierOrder: Record<string, number> = { critical: 0, follow_up: 1, worth_reading: 2 };
+  const storiesForTab =
+    tab === "critical"
+      ? topicFiltered.filter((s) => s.section === "critical")
+      : tab === "follow_up"
+        ? topicFiltered.filter((s) => s.section === "follow_up")
+        : tab === "research"
+          ? []
+          : [...topicFiltered].sort((a, b) => (tierOrder[a.section] ?? 9) - (tierOrder[b.section] ?? 9));
 
-  const hasRail = (watchlist && watchlist.length > 0) || Boolean(outsideRadar);
+  const researchForTab = tab === "critical" || tab === "follow_up" ? [] : research;
+
+  const leadStory = (tab === "all" || tab === "critical") ? storiesForTab.find((s) => s.section === "critical") : undefined;
+  const restStories = leadStory ? storiesForTab.filter((s) => s.id !== leadStory.id) : storiesForTab;
+
+  const hasRail = Boolean(questionWidget) || Boolean(outsideRadar) || (watchlist && watchlist.length > 0);
+  const readMinutes = estimateReadMinutes(stories, research);
 
   return (
-    <div className={hasRail ? "layout-grid" : undefined}>
-      <main>
-        <p className="eyebrow">
-          {formatEdition(periodDate)} · World Brief Edition
-        </p>
-        <h1 className="h1-serif">Günaydın, Evren.</h1>
+    <div>
+      <div className="top-meta">
+        <span>
+          Çalışma alanı<span className="crumb-sep">/</span>Günlük bülten
+        </span>
+        <span className="top-meta-status">
+          <span className="status-dot" />
+          Günlük brief · {briefTime ?? "07:00"}
+        </span>
+      </div>
 
-        <section className="section" style={{ marginTop: 20 }}>
-          <h2 className="h2-section">Bugünün Çerçevesi</h2>
-          <p className="dek">{headline}</p>
-        </section>
+      <div className={hasRail ? "layout-grid" : undefined}>
+        <main>
+          <div className="today-header">
+            <div>
+              <p className="eyebrow">{formatEdition(periodDate)}</p>
+              <h1 className="h1-serif">Günaydın, {OWNER_FIRST_NAME}.</h1>
+              <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>Dünyadaki gelişmeler. Senin için anlamı.</p>
+            </div>
+            <div className="today-header-stat">
+              <div className="num">{stories.length}</div>
+              <div className="label">gelişme · {readMinutes} dk okuma</div>
+            </div>
+          </div>
 
-        <div className="filters">
-          <select
-            className="select"
-            value={tierFilter}
-            onChange={(e) => setTierFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-          >
-            <option value="all">Tüm önem seviyeleri</option>
-            <option value={1}>Tier 1 (kritik)</option>
-            <option value={2}>Tier 2 (takip)</option>
-            <option value={3}>Tier 3 (okumaya değer)</option>
-          </select>
-          <select className="select" value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-            <option value="all">Tüm konular</option>
-            {allTopics.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+          <hr className="hr" />
 
-        {bySection
-          .filter((s) => s.stories.length > 0)
-          .map((s) => (
-            <section key={s.section} className="section">
-              <h2 className="h2-section">{SECTION_LABELS[s.section]}</h2>
-
-              {s.section === "critical" && s.stories[0] && (
-                <Link href={`/story/${s.stories[0].id}`} className="lead-card" style={{ display: "block", textDecoration: "none", color: "inherit" }}>
-                  <span className="badge badge-critical">Kritik</span>
-                  <div className="lead-title">{s.stories[0].title}</div>
-                  <p className="lead-summary">{s.stories[0].summary}</p>
-                  {s.stories[0].topics.length > 0 && <div className="row-meta">{s.stories[0].topics.join(", ")}</div>}
-                </Link>
-              )}
-
-              {s.stories.slice(s.section === "critical" ? 1 : 0).map((story) => (
-                <Link key={story.id} href={`/story/${story.id}`} className="row-link">
-                  <span className={`badge ${SECTION_BADGE[s.section]}`} style={{ marginBottom: 6 }}>
-                    Tier {story.tier}
-                  </span>
-                  <div className="row-title">{story.title}</div>
-                  <p className="row-summary">{story.summary}</p>
-                  {story.topics.length > 0 && <div className="row-meta">{story.topics.join(", ")}</div>}
-                </Link>
-              ))}
-            </section>
-          ))}
-
-        {research.length > 0 && (
-          <section className="section">
-            <h2 className="h2-section">Yeni araştırma</h2>
-            {research.map((r) => (
-              <div key={r.id} className="row-link">
-                <div className="row-title">{r.title}</div>
-                <p className="row-summary">{r.argument}</p>
-              </div>
-            ))}
+          <section>
+            <h2 className="h2-section framing-heading">
+              <IconFrame className="framing-icon" />
+              Bugünün Çerçevesi
+            </h2>
+            <p className="dek">{headline}</p>
           </section>
-        )}
-      </main>
 
-      {hasRail && (
-        <aside>
-          {watchlist && watchlist.length > 0 && (
-            <div className="rail-card">
-              <p className="rail-card-title">Masanın Kenarında</p>
-              <div className="link-list">
-                {watchlist.map((w) => (
-                  <a key={w.id} href={w.url} target="_blank" rel="noreferrer">
-                    <div className="row-title" style={{ fontSize: 13 }}>
-                      {w.title}
-                    </div>
-                    <div className="row-meta">{w.watchName}</div>
-                  </a>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div className="tab-nav">
+              {TABS.map((t) => (
+                <button key={t.key} className={`tab-item${tab === t.key ? " active" : ""}`} onClick={() => setTab(t.key)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {allTopics.length > 0 && (
+              <select className="select" style={{ width: "auto", fontSize: 12 }} value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
+                <option value="all">Tüm konular</option>
+                {allTopics.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
-              </div>
-            </div>
-          )}
+              </select>
+            )}
+          </div>
 
-          {outsideRadar && (
-            <div className="rail-card">
-              <p className="rail-card-title">Radarının dışında</p>
-              <div className="row-title" style={{ fontSize: 13 }}>
-                {outsideRadar.title}
+          <div>
+            {leadStory && (
+              <div className="lead-card-v2">
+                <div className="feed-eyebrow critical">
+                  <span className="dot" />
+                  Kritik{leadStory.topics[0] ? ` · ${leadStory.topics[0].toUpperCase()}` : ""}
+                </div>
+                <Link href={`/story/${leadStory.id}`} className="feed-headline lead">
+                  {leadStory.title}
+                </Link>
+                <p className="feed-desc">{leadStory.summary}</p>
+                {leadStory.whyItMatters && (
+                  <div className="callout">
+                    <div className="callout-label">Neden önemli</div>
+                    <div className="callout-text">{leadStory.whyItMatters}</div>
+                  </div>
+                )}
+                <div className="feed-footer">
+                  <span className="feed-meta">
+                    {leadStory.sourceCount != null
+                      ? `${leadStory.sourceCount} örnek kaynak${leadStory.perspectiveCount ? ` · ${leadStory.perspectiveCount} perspektif` : ""}`
+                      : leadStory.topics.join(", ")}
+                  </span>
+                  <SaveStoryButton storyId={leadStory.id} initiallySaved={savedStorySet.has(leadStory.id)} />
+                </div>
               </div>
-              <p className="row-summary">{outsideRadar.reason}</p>
-            </div>
-          )}
-        </aside>
-      )}
+            )}
+
+            {restStories.map((story) => (
+              <div key={story.id} className="feed-item">
+                <div className={`feed-eyebrow${story.section === "critical" ? " critical" : ""}`}>
+                  <span className="dot" />
+                  {story.section === "critical" ? "Kritik" : story.topics[0]?.toUpperCase() ?? "Genel"}
+                </div>
+                <Link href={`/story/${story.id}`} className="feed-headline">
+                  {story.title}
+                </Link>
+                <p className="feed-desc">{story.summary}</p>
+                <div className="feed-footer">
+                  <span className="feed-meta">
+                    {story.sourceCount != null
+                      ? `${story.sourceCount} örnek kaynak${story.perspectiveCount ? ` · ${story.perspectiveCount} perspektif` : ""}`
+                      : story.topics.join(", ")}
+                  </span>
+                  <SaveStoryButton storyId={story.id} initiallySaved={savedStorySet.has(story.id)} />
+                </div>
+              </div>
+            ))}
+
+            {researchForTab.map((r) => (
+              <div key={r.id} className="feed-item">
+                <div className="feed-eyebrow">
+                  <span className="dot" />
+                  Yeni araştırma
+                </div>
+                <div className="feed-headline">{r.title}</div>
+                <p className="feed-desc">{r.argument}</p>
+                <div className="feed-footer">
+                  <span className="feed-meta">Örnek araştırma notu</span>
+                  {r.itemId && <SaveItemButton itemId={r.itemId} initiallySaved={savedItemSet.has(r.itemId)} />}
+                </div>
+              </div>
+            ))}
+
+            {!leadStory && restStories.length === 0 && researchForTab.length === 0 && <p className="empty">Bu filtrede gösterilecek bir şey yok.</p>}
+          </div>
+
+          <div className="end-marker">
+            <IconCheck />
+            Bugünkü seçkinin sonuna geldin.
+          </div>
+        </main>
+
+        {hasRail && (
+          <aside>
+            <p className="rail-header">Masanın Kenarında</p>
+
+            {questionWidget && (
+              <div className="rail-card-v2">
+                <p className="rail-card-eyebrow">Takip ettiğin soru</p>
+                <p className="rail-card-title-v2">{questionWidget.text}</p>
+                <p className="rail-card-desc">{questionWidget.note}</p>
+                <Link href={`/story/${questionWidget.storyId}`} className="rail-card-link">
+                  İlgili gelişme <IconArrowRight />
+                </Link>
+              </div>
+            )}
+
+            {outsideRadar && (
+              <div className="rail-card-v2">
+                <p className="rail-card-eyebrow">Radarının dışında</p>
+                <p className="rail-card-title-v2">{outsideRadar.title}</p>
+                <p className="rail-card-desc">{outsideRadar.reason}</p>
+                {outsideRadar.url && (
+                  <a href={outsideRadar.url} target="_blank" rel="noreferrer" className="rail-card-link">
+                    Kaynağa git <IconArrowRight />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {watchlist && watchlist.length > 0 && (
+              <div className="rail-card-v2">
+                <p className="rail-card-eyebrow">Takip listesinden</p>
+                <div className="link-list">
+                  {watchlist.map((w) => (
+                    <a key={w.id} href={w.url} target="_blank" rel="noreferrer">
+                      <div className="row-title" style={{ fontSize: 13 }}>
+                        {w.title}
+                      </div>
+                      <div className="row-meta">{w.watchName}</div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="rail-tagline">
+              Daha çok haber değil,
+              <br />
+              daha iyi bir perspektif.
+            </p>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

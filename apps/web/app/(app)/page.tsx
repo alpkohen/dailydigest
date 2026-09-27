@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { TodayView, type TodayStory, type TodayResearchItem } from "@/components/TodayView";
-
-const SECTION_TIER: Record<string, 1 | 2 | 3> = { critical: 1, follow_up: 2, worth_reading: 3 };
+import { TodayView } from "@/components/TodayView";
+import { loadTodayViewProps } from "./briefData";
+import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
 
 export default async function TodayPage() {
   const supabase = await createServerSupabaseClient();
@@ -17,61 +17,12 @@ export default async function TodayPage() {
   if (!brief) {
     return (
       <main>
-        <h1 className="h1-serif">Günaydın, Evren.</h1>
+        <h1 className="h1-serif">Günaydın, {OWNER_FIRST_NAME}.</h1>
         <p className="empty">Henüz bir brief oluşturulmadı.</p>
       </main>
     );
   }
 
-  const { data: briefStories } = await supabase
-    .from("brief_stories")
-    .select("section, position, stories(id, title, summary, tier, story_topics(topics(name)))")
-    .eq("brief_id", brief.id)
-    .order("position");
-
-  type BriefStoryRow = {
-    section: string;
-    stories: {
-      id: string;
-      title: string;
-      summary: string | null;
-      tier: number | null;
-      story_topics: { topics: { name: string } | null }[];
-    } | null;
-  };
-
-  const stories: TodayStory[] = ((briefStories ?? []) as unknown as BriefStoryRow[])
-    .filter((row) => row.stories)
-    .map((row) => ({
-      id: row.stories!.id,
-      title: row.stories!.title,
-      summary: row.stories!.summary ?? "",
-      tier: row.stories!.tier ?? SECTION_TIER[row.section] ?? 3,
-      section: row.section,
-      topics: row.stories!.story_topics.map((st) => st.topics?.name).filter((n): n is string => Boolean(n)),
-    }));
-
-  const content = brief.content as {
-    headline: string;
-    sections: { section: string; items: { id: string; title?: string; argument?: string }[] }[];
-    outsideRadar?: { title: string; reason: string } | null;
-    watchlist?: { id: string; title: string; url: string; watchName: string }[];
-  } | null;
-  const research: TodayResearchItem[] =
-    content?.sections.find((s) => s.section === "new_research")?.items.map((i) => ({
-      id: i.id,
-      title: i.title ?? "",
-      argument: i.argument ?? "",
-    })) ?? [];
-
-  return (
-    <TodayView
-      periodDate={brief.period_date}
-      headline={content?.headline ?? ""}
-      stories={stories}
-      research={research}
-      outsideRadar={content?.outsideRadar}
-      watchlist={content?.watchlist}
-    />
-  );
+  const props = await loadTodayViewProps(supabase, brief);
+  return <TodayView {...props} />;
 }
