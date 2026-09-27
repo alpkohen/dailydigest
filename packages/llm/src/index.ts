@@ -1,6 +1,7 @@
 export * from "./call.js";
 export * from "./cost.js";
 export * from "./embed.js";
+export * from "./prompts/ask.js";
 export * from "./prompts/briefCompose.js";
 export * from "./prompts/outsideRadar.js";
 export * from "./prompts/questionEvidence.js";

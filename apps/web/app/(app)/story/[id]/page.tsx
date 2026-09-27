@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { AskStory } from "./AskStory";
 import { FeedbackButtons } from "./FeedbackButtons";
 
 interface StoryItemRow {
@@ -113,6 +114,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
           </a>
         ))}
       </section>
+
+      <AskStory storyId={story.id} />
     </main>
   );
 }

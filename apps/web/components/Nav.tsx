@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/questions", label: "Questions" },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/sources", label: "Sources" },
+  { href: "/archive", label: "Archive" },
   { href: "/reading-list", label: "Reading" },
   { href: "/briefs", label: "Briefs" },
   { href: "/settings", label: "Settings" },
