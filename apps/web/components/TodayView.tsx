@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { saveItemToReadingListAction, saveStoryToReadingListAction } from "@/app/(app)/todayActions";
 import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
 import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
+import { pickGreeting } from "@/lib/greetings";
 
 export interface TodayStory {
   id: string;
@@ -142,6 +143,7 @@ export function TodayView({
 }) {
   const [tab, setTab] = useState<TabKey>("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
+  const greeting = useMemo(() => pickGreeting(OWNER_FIRST_NAME), []);
 
   const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
   const savedStorySet = useMemo(() => new Set(savedStoryIds), [savedStoryIds]);
@@ -171,11 +173,11 @@ export function TodayView({
     <div>
       <div className="top-meta">
         <span>
-          Workspace<span className="crumb-sep">/</span>Daily brief
+          Workspace<span className="crumb-sep">/</span>Today
         </span>
         <span className="top-meta-status">
           <span className="status-dot" />
-          Daily brief · {briefTime ?? "07:00"}
+          Today&apos;s edition · {briefTime ?? "07:00"}
         </span>
       </div>
 
@@ -184,7 +186,7 @@ export function TodayView({
           <div className="today-header">
             <div>
               <p className="eyebrow">{formatEdition(periodDate)}</p>
-              <h1 className="greeting-title">Good morning, {OWNER_FIRST_NAME}.</h1>
+              <h1 className="greeting-title">{greeting}</h1>
               <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>The developments shaping the world. What they mean for you.</p>
             </div>
             <div className="today-header-stat">
@@ -200,7 +202,7 @@ export function TodayView({
               <IconFrame className="framing-icon" />
               Today&apos;s Framing
             </h2>
-            <p className="dek">{headline}</p>
+            <p className="dek" lang="tr">{headline}</p>
           </section>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -233,11 +235,11 @@ export function TodayView({
                 <Link href={`/story/${leadStory.id}`} className="feed-headline lead">
                   {leadStory.title}
                 </Link>
-                <p className="feed-desc">{leadStory.summary}</p>
+                <p className="feed-desc" lang="tr">{leadStory.summary}</p>
                 {leadStory.whyItMatters && (
                   <div className="callout">
                     <div className="callout-label">Why it matters</div>
-                    <div className="callout-text">{leadStory.whyItMatters}</div>
+                    <div className="callout-text" lang="tr">{leadStory.whyItMatters}</div>
                   </div>
                 )}
                 <div className="feed-footer">
@@ -256,7 +258,7 @@ export function TodayView({
                 <Link href={`/story/${story.id}`} className="feed-headline">
                   {story.title}
                 </Link>
-                <p className="feed-desc">{story.summary}</p>
+                <p className="feed-desc" lang="tr">{story.summary}</p>
                 <div className="feed-footer">
                   <span className="feed-meta">{sourceMeta(story.sourceCount, story.perspectiveCount) ?? story.topics.join(", ")}</span>
                   <SaveStoryButton storyId={story.id} initiallySaved={savedStorySet.has(story.id)} />
@@ -271,7 +273,7 @@ export function TodayView({
                   New research
                 </div>
                 <div className="feed-headline">{r.title}</div>
-                <p className="feed-desc">{r.argument}</p>
+                <p className="feed-desc" lang="tr">{r.argument}</p>
                 <div className="feed-footer">
                   <span className="feed-meta">Research note</span>
                   {r.itemId && <SaveItemButton itemId={r.itemId} initiallySaved={savedItemSet.has(r.itemId)} />}
@@ -295,8 +297,8 @@ export function TodayView({
             {questionWidget && (
               <div className="rail-card-v2">
                 <p className="rail-card-eyebrow">Question you&apos;re tracking</p>
-                <p className="rail-card-title-v2">{questionWidget.text}</p>
-                <p className="rail-card-desc">{questionWidget.note}</p>
+                <p className="rail-card-title-v2" lang="tr">{questionWidget.text}</p>
+                <p className="rail-card-desc" lang="tr">{questionWidget.note}</p>
                 <Link href={`/story/${questionWidget.storyId}`} className="rail-card-link">
                   Related development <IconArrowRight />
                 </Link>
@@ -306,8 +308,8 @@ export function TodayView({
             {outsideRadar && (
               <div className="rail-card-v2">
                 <p className="rail-card-eyebrow">Outside your radar</p>
-                <p className="rail-card-title-v2">{outsideRadar.title}</p>
-                <p className="rail-card-desc">{outsideRadar.reason}</p>
+                <p className="rail-card-title-v2" lang="tr">{outsideRadar.title}</p>
+                <p className="rail-card-desc" lang="tr">{outsideRadar.reason}</p>
                 {outsideRadar.url && (
                   <a href={outsideRadar.url} target="_blank" rel="noreferrer" className="rail-card-link">
                     View source <IconArrowRight />
