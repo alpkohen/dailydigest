@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@/lib/actionResult";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function createWatchAction(formData: FormData): Promise<{ error?: string }> {
@@ -26,8 +27,10 @@ export async function createWatchAction(formData: FormData): Promise<{ error?: s
   return {};
 }
 
-export async function setWatchActiveAction(watchId: string, active: boolean): Promise<void> {
+export async function setWatchActiveAction(watchId: string, active: boolean): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
-  await supabase.from("watches").update({ active }).eq("id", watchId);
+  const { error } = await supabase.from("watches").update({ active }).eq("id", watchId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/watchlist");
+  return { ok: true };
 }

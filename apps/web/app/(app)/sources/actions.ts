@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { assertPublicHttpUrl } from "@dailydigest/db";
+import type { ActionResult } from "@/lib/actionResult";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function setSourceActiveAction(sourceId: string, active: boolean): Promise<void> {
+export async function setSourceActiveAction(sourceId: string, active: boolean): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
-  await supabase.from("sources").update({ active }).eq("id", sourceId);
+  const { error } = await supabase.from("sources").update({ active }).eq("id", sourceId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/sources");
+  return { ok: true };
 }
 
 export async function createSourceAction(formData: FormData): Promise<{ error?: string }> {

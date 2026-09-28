@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { setSourceActiveAction } from "./actions";
 
 const HEALTH_BADGE: Record<string, string> = {
@@ -28,6 +28,7 @@ export function SourceRow({
   active: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="row-flex">
@@ -37,8 +38,19 @@ export function SourceRow({
         <div className="row-meta">
           {type} · weight {weight} {perspectiveGroup ? `· ${perspectiveGroup}` : ""}
         </div>
+        {error && <div className="text-danger" style={{ fontSize: 12 }}>{error}</div>}
       </div>
-      <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => setSourceActiveAction(id, !active))}>
+      <button
+        className="btn btn-sm"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            const result = await setSourceActiveAction(id, !active);
+            if (!result.ok) setError(result.error ?? "Could not update.");
+          })
+        }
+      >
         {active ? "Mute" : "Activate"}
       </button>
     </div>
