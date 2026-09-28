@@ -30,6 +30,12 @@ const envSchema = z.object({
   HMAC_SECRET: z.string().min(16).optional(),
   // Base URL the feedback links point at; defaults to local dev.
   WEB_APP_URL: z.string().url().default("http://localhost:3100"),
+  // Kill switch (recommendation #3 from reviewing a sister project's
+  // ACTAWARE_BACKGROUND_PAUSED): set to "true" as a GitHub Actions repo
+  // variable to stop every scheduled and manual run from doing any real
+  // work - no LLM calls, no fetches, no email - without touching code or
+  // waiting on a deploy. Toggle it back to resume.
+  WORKER_BACKGROUND_PAUSED: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

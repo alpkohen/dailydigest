@@ -123,6 +123,12 @@ async function main() {
   }
 
   const env = loadEnv();
+
+  if (env.WORKER_BACKGROUND_PAUSED === "true") {
+    console.log("WORKER_BACKGROUND_PAUSED=true - skipping this run entirely (no stages, no LLM calls, no fetches).");
+    return;
+  }
+
   const config = await loadWorkerConfig();
   await reclaimStuckRuns(env);
 

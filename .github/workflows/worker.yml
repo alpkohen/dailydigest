@@ -53,6 +53,11 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           HMAC_SECRET: ${{ secrets.HMAC_SECRET }}
           WEB_APP_URL: ${{ secrets.WEB_APP_URL }}
+          # Kill switch: `gh variable set WORKER_BACKGROUND_PAUSED --body true`
+          # stops every run (scheduled and manual) from doing real work,
+          # `gh variable set WORKER_BACKGROUND_PAUSED --body false` resumes -
+          # no code change or redeploy needed either way.
+          WORKER_BACKGROUND_PAUSED: ${{ vars.WORKER_BACKGROUND_PAUSED }}
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.all }}" = "true" ]; then
             pnpm worker:run --all
