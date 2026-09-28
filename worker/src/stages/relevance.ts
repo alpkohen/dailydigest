@@ -30,6 +30,20 @@ interface ItemRow {
   embedding: number[] | null;
 }
 
+export type RelevanceOutcome = "scored" | "not_relevant" | "retry";
+
+/**
+ * A failed LLM call must never be mistaken for "scored below threshold" -
+ * that misclassified real items as not_relevant purely because a call
+ * failed (found in a full-system audit, 2026-09-28). "retry" means: leave
+ * the item's status unchanged so the next relevance run picks it back up.
+ */
+export function resolveRelevanceOutcome(clearedAnyThreshold: boolean, hadFailure: boolean): RelevanceOutcome {
+  if (clearedAnyThreshold) return "scored";
+  if (hadFailure) return "retry";
+  return "not_relevant";
+}
+
 /**
  * SPEC.md section 6, stage 5 "Relevance": cheap model scores each canonical
  * item against each active topic whose embedding pre-filter passes. Items
@@ -83,10 +97,17 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
 
   let scoredPairs = 0;
   let archived = 0;
+  let leftForRetry = 0;
 
   await runPool(items, CONCURRENCY, async (item) => {
     if (!item.embedding) return;
     let clearedAnyThreshold = false;
+    // A full-system audit found items being marked not_relevant (silently
+    // dropped from briefs) purely because their LLM call failed, not
+    // because they scored below threshold - the two were indistinguishable
+    // from clearedAnyThreshold alone. Track failures separately so a
+    // failed call defers the item instead of misclassifying it.
+    let hadFailure = false;
 
     for (const topic of topics as TopicRow[]) {
       if (!topic.embedding) continue;
@@ -131,23 +152,33 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
         scoredPairs++;
         if (result.score >= topic.relevance_threshold) clearedAnyThreshold = true;
       } catch (err) {
+        hadFailure = true;
         console.error(`relevance: failed scoring item ${item.id} against topic ${topic.id}: ${(err as Error).message}`);
       }
     }
 
-    const newStatus = clearedAnyThreshold ? "scored" : "not_relevant";
-    if (newStatus === "not_relevant") archived++;
-    await db.from("items").update({ status: newStatus }).eq("id", item.id);
+    const outcome = resolveRelevanceOutcome(clearedAnyThreshold, hadFailure);
+    if (outcome === "retry") {
+      // Leave status as "embedded" (unchanged): the next relevance run
+      // picks it back up via the same status="embedded" query this stage
+      // already uses, so no separate retry path or item status is needed.
+      leftForRetry++;
+      return;
+    }
+    if (outcome === "not_relevant") archived++;
+    await db.from("items").update({ status: outcome }).eq("id", item.id);
   });
 
   await db
     .from("pipeline_runs")
     .update({
       finished_at: new Date().toISOString(),
-      status: "ok",
-      stats: { stage: "relevance", date, itemsChecked: items.length, scoredPairs, archived },
+      status: leftForRetry > 0 ? "partial" : "ok",
+      stats: { stage: "relevance", date, itemsChecked: items.length, scoredPairs, archived, leftForRetry },
     })
     .eq("id", run.id);
 
-  console.log(`relevance stage done: ${scoredPairs} item/topic pairs scored, ${archived} items archived as not_relevant`);
+  console.log(
+    `relevance stage done: ${scoredPairs} item/topic pairs scored, ${archived} items archived as not_relevant, ${leftForRetry} left for retry after a failed call`,
+  );
 }
