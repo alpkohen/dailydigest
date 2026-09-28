@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
-import { IconArchive, IconBookmark, IconChevronDown, IconClose, IconMenu, IconToday } from "./icons";
+import { AskPanel } from "./AskWidget";
+import { IconArchive, IconBookmark, IconChevronDown, IconClose, IconMenu, IconSpark, IconToday } from "./icons";
 
 const PRIMARY_LINKS = [
   { href: "/", label: "Today", icon: IconToday },
@@ -40,6 +41,8 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  const [askOpen, setAskOpen] = useState(false);
 
   // Collapsed state is a per-viewer UI preference, not data other people or
   // future sessions need to see, so it lives in localStorage rather than
@@ -91,6 +94,10 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
           Reading list
           {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
         </Link>
+        <button type="button" className={`sidebar-link${askOpen ? " active" : ""}`} onClick={() => setAskOpen((v) => !v)}>
+          <IconSpark className="icon" />
+          Ask
+        </button>
       </nav>
 
       {visibleTopics.length > 0 && (
@@ -138,6 +145,8 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
           <div className="sidebar-footer-sub">Personal workspace</div>
         </div>
       </div>
+
+      <AskPanel open={askOpen} onClose={() => setAskOpen(false)} />
     </aside>
   );
 }

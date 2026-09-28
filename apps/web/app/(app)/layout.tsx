@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { AskWidget } from "@/components/AskWidget";
 import { Sidebar } from "@/components/Sidebar";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -23,7 +22,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="app-content">
         <div className="page">{children}</div>
       </div>
-      <AskWidget />
     </div>
   );
 }

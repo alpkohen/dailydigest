@@ -1063,33 +1063,10 @@ a.feed-headline:hover {
   margin-top: 2px;
 }
 
-.ask-widget-fab {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 12px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--accent);
-  color: #0d1410;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-}
-
-.ask-widget-fab:hover {
-  background: var(--accent-strong);
-}
-
 .ask-widget-panel {
   position: fixed;
-  right: 24px;
-  bottom: 84px;
+  left: 268px;
+  bottom: 24px;
   z-index: 40;
   width: 360px;
   max-width: calc(100vw - 32px);
@@ -1101,6 +1078,20 @@ a.feed-headline:hover {
   border-radius: var(--radius);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+}
+
+.ask-widget-close {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.ask-widget-close:hover {
+  color: var(--text);
 }
 
 .ask-widget-header {
@@ -1149,13 +1140,11 @@ a.feed-headline:hover {
   flex-shrink: 0;
 }
 
-@media (max-width: 640px) {
-  .ask-widget-fab {
+@media (max-width: 860px) {
+  .ask-widget-panel {
+    left: 16px;
     right: 16px;
     bottom: 16px;
-  }
-  .ask-widget-panel {
-    right: 16px;
-    bottom: 76px;
+    width: auto;
   }
 }
