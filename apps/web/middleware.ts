@@ -66,6 +66,17 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// Found while chasing a missing email logo: the old matcher only excluded
+// _next/static, _next/image and favicon.ico, so a public static asset like
+// /brand/world-brief-mark.png (embedded in every sent email) still ran the
+// full middleware - including the auto-login above, which then issued a
+// real Supabase session cookie in the response to whoever fetched it. Mail
+// clients fetch embedded images through their own server-side proxies
+// (Gmail's image proxy, Outlook's safe-links cache, etc.), so this meant a
+// live, valid session cookie for the owner's account was handed to a third
+// party on every single email open. Excluding all public static files
+// (anything in /public with a file extension, plus /brand/ explicitly)
+// stops middleware - and therefore auto-login - from ever running on them.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/|.*\\.(?:png|jpg|jpeg|webp|gif|svg|ico|css|js|map)$).*)"],
 };

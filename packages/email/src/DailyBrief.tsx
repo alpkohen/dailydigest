@@ -45,7 +45,11 @@ const SECTION_META: Record<
   new_research: { title: "New research", color: COLORS.violet },
 };
 
-const LOGO_URL = "https://world-brief.netlify.app/brand/world-brief-mark.webp";
+// .png, not .webp: Outlook (desktop, Word-based rendering engine) doesn't
+// support WebP at all, and several other mail clients are inconsistent
+// about it - the logo was silently missing from every sent email until
+// this was found and fixed. PNG is universally supported.
+const LOGO_URL = "https://world-brief.netlify.app/brand/world-brief-mark.png";
 
 /**
  * SPEC.md section 9: React Email, Turkish copy for generated content, short
