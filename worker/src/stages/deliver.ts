@@ -84,14 +84,26 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
   });
 
   if (result.error) {
-    await db.from("briefs").update({ html, status: "failed" }).eq("id", brief.id);
+    const { error: markFailedError } = await db.from("briefs").update({ html, status: "failed" }).eq("id", brief.id);
+    if (markFailedError) console.error(`deliver: failed to mark brief ${brief.id} as failed: ${markFailedError.message}`);
     throw new Error(`Resend send failed: ${result.error.message}`);
   }
 
-  await db
+  // A real send with no error checking here once left the brief stuck on
+  // "ready" - the email sent (confirmed by a Resend id) but the DB never
+  // recorded it, so deliver would have resent it on the next run. Check
+  // the error and the affected row count explicitly rather than trusting
+  // an unchecked await.
+  const { data: updated, error: markSentError } = await db
     .from("briefs")
     .update({ html, sent_at: new Date().toISOString(), resend_id: result.data?.id, status: "sent" })
-    .eq("id", brief.id);
+    .eq("id", brief.id)
+    .select("id");
+  if (markSentError || !updated || updated.length === 0) {
+    throw new Error(
+      `deliver: email sent (resend id ${result.data?.id}) but failed to mark brief ${brief.id} as sent: ${markSentError?.message ?? "no rows updated"}`,
+    );
+  }
 
   console.log(`deliver stage done: brief ${brief.id} sent (resend id ${result.data?.id})`);
 }
