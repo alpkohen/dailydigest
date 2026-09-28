@@ -9,6 +9,8 @@ export interface BriefSectionItem {
   title?: string;
   summary?: string;
   argument?: string;
+  /** CLAUDE.md rule 6: our own summary plus a link to the original. */
+  url?: string;
   /** One-click signed links (SPEC.md section 9); omitted for research items. */
   links?: { save: string; notRelevant: string; lessLikeThis: string };
 }
@@ -16,7 +18,7 @@ export interface BriefSectionItem {
 export interface BriefContent {
   headline: string;
   sections: { section: "critical" | "follow_up" | "worth_reading" | "new_research"; items: BriefSectionItem[] }[];
-  outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string } | null;
+  outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string; url?: string } | null;
   watchlist?: { id: string; title: string; url: string; watchName: string }[];
 }
 
@@ -115,7 +117,13 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                   {section.items.map((item) => (
                     <div key={item.id} style={{ margin: "0 0 16px" }}>
                       <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
-                        {item.title}
+                        {item.url ? (
+                          <a href={item.url} style={{ color: COLORS.text, textDecoration: "none" }}>
+                            {item.title}
+                          </a>
+                        ) : (
+                          item.title
+                        )}
                       </Text>
                       <Text style={{ fontSize: 13, lineHeight: "19px", color: COLORS.textDim, margin: 0 }}>
                         {item.summary ?? item.argument}
@@ -189,7 +197,13 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                 Outside your radar
               </Text>
               <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
-                {content.outsideRadar.title}
+                {content.outsideRadar.url ? (
+                  <a href={content.outsideRadar.url} style={{ color: COLORS.text, textDecoration: "none" }}>
+                    {content.outsideRadar.title}
+                  </a>
+                ) : (
+                  content.outsideRadar.title
+                )}
               </Text>
               <Text style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>{content.outsideRadar.reason}</Text>
             </Section>
