@@ -6,7 +6,7 @@ import { saveItemToReadingListAction, saveStoryToReadingListAction } from "@/app
 import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
 import { AiTag } from "./AiTag";
 import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
-import { pickGreeting } from "@/lib/greetings";
+import { pickArchiveGreeting, pickGreeting } from "@/lib/greetings";
 
 export interface TodayStory {
   id: string;
@@ -180,7 +180,9 @@ export function TodayView({
   // being read as it lands. A full-system audit found it showing up on past
   // briefs too (e.g. "Rise and shine" at 9pm while reading last week's
   // edition), since it was computed from the current clock, not the brief's
-  // own date. Archived editions get a fixed, date-agnostic title instead.
+  // own date. Archived editions get a separate, date-neutral pool instead
+  // (pickArchiveGreeting) - still a different, creative greeting on every
+  // visit, just not tied to the clock.
   const isToday = useMemo(() => periodDate === new Date().toISOString().slice(0, 10), [periodDate]);
 
   // Randomised per load, but the pick must not differ between the server
@@ -189,7 +191,7 @@ export function TodayView({
   // on both, then swap in the random pick only after mount.
   const [greeting, setGreeting] = useState(`Hello, ${OWNER_FIRST_NAME} 🌸.`);
   useEffect(() => {
-    if (isToday) setGreeting(pickGreeting(OWNER_FIRST_NAME));
+    setGreeting(isToday ? pickGreeting(OWNER_FIRST_NAME) : pickArchiveGreeting(OWNER_FIRST_NAME));
   }, [isToday]);
 
   const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
@@ -231,7 +233,7 @@ export function TodayView({
           <div className="today-header">
             <div>
               <p className="eyebrow">{formatEdition(periodDate)}</p>
-              <h1 className="greeting-title">{isToday ? greeting : `World Brief, ${OWNER_FIRST_NAME}.`}</h1>
+              <h1 className="greeting-title">{greeting}</h1>
               <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>The developments shaping the world. What they mean for you.</p>
             </div>
             <div className="today-header-stat">

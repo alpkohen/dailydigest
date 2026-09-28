@@ -16,3 +16,14 @@ export function pickGreeting(name: string): string {
   const phrase = pool[Math.floor(Math.random() * pool.length)];
   return `${phrase}, ${name} 🌸.`;
 }
+
+// Archived briefs aren't "today", so a time-of-day phrase ("Good morning")
+// would be wrong regardless of the clock - this pool is date-neutral
+// instead, and still picks a different one on every visit (see TodayView's
+// isToday branch) so an old brief doesn't just say a flat "World Brief."
+const ARCHIVE = ["Welcome back", "Good to see you", "Stepping into the archive", "Back for more", "Catching up", "Revisiting the past"];
+
+export function pickArchiveGreeting(name: string): string {
+  const phrase = ARCHIVE[Math.floor(Math.random() * ARCHIVE.length)];
+  return `${phrase}, ${name} 🌸.`;
+}
