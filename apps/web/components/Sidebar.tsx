@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
 import { AskPanel } from "./AskWidget";
 import { IconArchive, IconBookmark, IconChevronDown, IconClose, IconMenu, IconSpark, IconToday } from "./icons";
 
@@ -134,18 +133,14 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
         ))}
       </div>
 
-      <button type="button" className={`sidebar-link${askOpen ? " active" : ""}`} onClick={() => setAskOpen((v) => !v)}>
+      <button
+        type="button"
+        className={`sidebar-link sidebar-ask-link${askOpen ? " active" : ""}`}
+        onClick={() => setAskOpen((v) => !v)}
+      >
         <IconSpark className="icon" />
         Ask
       </button>
-
-      <div className="sidebar-footer">
-        <span className="sidebar-avatar">{OWNER_INITIALS}</span>
-        <div>
-          <div className="sidebar-footer-name">{OWNER_DISPLAY_NAME}</div>
-          <div className="sidebar-footer-sub">Personal workspace</div>
-        </div>
-      </div>
 
       <AskPanel open={askOpen} onClose={() => setAskOpen(false)} />
     </aside>

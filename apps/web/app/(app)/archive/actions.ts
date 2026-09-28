@@ -96,11 +96,12 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
     p_match_count: 15,
   });
   if (searchError) return { error: searchError.message };
-  if (!candidates || candidates.length === 0) {
-    return { answer: "Arşivde bu soruyla ilgili yeterli kanıt yok.", citations: [] };
-  }
-
-  const indexed = candidates.map((c: SearchResultItem, i: number) => ({ index: i + 1, ...c }));
+  // Used to return early here with "not enough evidence" whenever the
+  // archive search matched nothing - but buildAskPrompt now also answers
+  // questions about World Brief itself (from its built-in APP_INFO
+  // block), and those never match a news-archive search. Always reach the
+  // LLM; it decides which context (archive items or app info) applies.
+  const indexed = (candidates ?? []).map((c: SearchResultItem, i: number) => ({ index: i + 1, ...c }));
 
   const result = await callLlm({
     role: "strong",
