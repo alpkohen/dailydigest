@@ -141,7 +141,7 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
       >
         <span className="sidebar-ask-icon"><IconSpark /></span>
         <span className="sidebar-ask-copy">
-          <span className="sidebar-ask-title">Ask the archive</span>
+          <span className="sidebar-ask-title">Brief AI</span>
           <span className="sidebar-ask-description">Find context in your coverage</span>
         </span>
         <span className="sidebar-ask-arrow" aria-hidden="true">↗</span>
