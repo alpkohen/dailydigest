@@ -140,10 +140,9 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
         aria-expanded={askOpen}
       >
         <span className="sidebar-ask-icon"><IconSpark /></span>
-        <span className="sidebar-ask-copy">
-          <span className="sidebar-ask-title">Brief AI</span>
-          <span className="sidebar-ask-description">Find context in your coverage</span>
-        </span>
+          <span className="sidebar-ask-copy">
+            <span className="sidebar-ask-title">Brief AI</span>
+          </span>
         <span className="sidebar-ask-arrow" aria-hidden="true">↗</span>
       </button>
 
