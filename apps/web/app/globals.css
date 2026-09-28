@@ -719,19 +719,9 @@ textarea {
 .today-header-stat {
   text-align: right;
   flex-shrink: 0;
-}
-
-.today-header-stat .num {
-  font-family: var(--font-serif);
-  font-size: 28px;
-  color: var(--text);
-  line-height: 1;
-}
-
-.today-header-stat .label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-faint);
-  margin-top: 4px;
+  white-space: nowrap;
 }
 
 .framing-heading {

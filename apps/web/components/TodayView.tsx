@@ -237,8 +237,7 @@ export function TodayView({
               <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>The developments shaping the world. What they mean for you.</p>
             </div>
             <div className="today-header-stat">
-              <div className="num">{stories.length}</div>
-              <div className="label">developments · {readMinutes} min read</div>
+              {stories.length} developments · {readMinutes} min read
             </div>
           </div>
 
