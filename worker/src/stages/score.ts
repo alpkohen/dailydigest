@@ -31,6 +31,7 @@ export async function runScoreStage(env: Env, models: ModelsConfig, date: string
   if (storiesError) throw new Error(`Failed to load stories: ${storiesError.message}`);
 
   let scored = 0;
+  let failed = 0;
 
   await runPool((stories ?? []) as { id: string; novelty: string | null; story_items: { count: number }[] }[], CONCURRENCY, async (story) => {
     const { data: items } = await db
@@ -66,14 +67,22 @@ export async function runScoreStage(env: Env, models: ModelsConfig, date: string
         .eq("id", story.id);
       scored++;
     } catch (err) {
+      failed++;
       console.error(`score: failed scoring story ${story.id}: ${(err as Error).message}`);
     }
   });
 
+  // A code review found this always writing status "ok" even when
+  // individual stories failed (only console.error'd), giving no signal
+  // anywhere that some stories never got a tier and won't reach the brief.
   await db
     .from("pipeline_runs")
-    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "score", date, scored } })
+    .update({
+      finished_at: new Date().toISOString(),
+      status: failed > 0 ? "partial" : "ok",
+      stats: { stage: "score", date, attempted: (stories ?? []).length, scored, failed },
+    })
     .eq("id", run.id);
 
-  console.log(`score stage done: ${scored} stories scored`);
+  console.log(`score stage done: ${scored} stories scored, ${failed} failed`);
 }
