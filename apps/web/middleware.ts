@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     request.nextUrl.pathname.startsWith("/auth/callback") ||
     request.nextUrl.pathname.startsWith("/api/feedback") ||
-    request.nextUrl.pathname.startsWith("/feedback-confirmed");
+    request.nextUrl.pathname.startsWith("/feedback-confirm");
   if (isPublicRoute) return response;
 
   let { data } = await supabase.auth.getUser();
