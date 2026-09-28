@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@dailydigest/db": "workspace:*"
+    "@dailydigest/db": "workspace:*",
+    "@dailydigest/llm": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

@@ -1,0 +1,86 @@
+[
+  {
+    "case_id": "enrich-001",
+    "label": "Rich content - specific figures and dates must survive",
+    "items": [
+      {
+        "title": "NATO agrees to raise defence spending target to 3.5% of GDP by 2032",
+        "standfirst": "Leaders confirmed the new target at the summit in The Hague, with a review clause built in for 2029.",
+        "sourceName": "Reuters",
+        "perspectiveGroup": "Batı medyası ve düşünce kuruluşları",
+        "language": "en"
+      }
+    ],
+    "mustContain": ["3.5", "2032"],
+    "mustNotContain": []
+  },
+  {
+    "case_id": "enrich-002",
+    "label": "Thin content (title only, no standfirst) - must not invent specifics",
+    "items": [
+      {
+        "title": "Turkish central bank holds policy rate steady",
+        "standfirst": null,
+        "sourceName": "Reuters",
+        "perspectiveGroup": "Batı medyası ve düşünce kuruluşları",
+        "language": "en"
+      }
+    ],
+    "mustContain": [],
+    "mustNotContain": ["baz puan", "indirim", "faiz artışı", "%50", "%45"]
+  },
+  {
+    "case_id": "enrich-003",
+    "label": "Two distinct perspective groups covering the same event - framing must reflect both",
+    "items": [
+      {
+        "title": "Government hails new employment figures as proof of economic recovery",
+        "standfirst": "Officials pointed to a 2 percentage point drop in unemployment over the past year.",
+        "sourceName": "Anadolu Ajansı",
+        "perspectiveGroup": "TR hükümete yakın",
+        "language": "tr"
+      },
+      {
+        "title": "Opposition economists say headline jobs data masks rising informal employment",
+        "standfirst": "Independent analysts argue much of the reported job growth is in unregistered, low-quality work.",
+        "sourceName": "Cumhuriyet",
+        "perspectiveGroup": "TR muhalif / bağımsız",
+        "language": "tr"
+      }
+    ],
+    "mustContain": [],
+    "mustNotContain": [],
+    "minFramingGroups": 2
+  },
+  {
+    "case_id": "enrich-004",
+    "label": "Single source, single perspective - framing should stay empty or near-empty",
+    "items": [
+      {
+        "title": "HSE fines logistics firm £1.2m after fatal warehouse fall",
+        "standfirst": "The worker fell 8 metres through a fragile roof panel; the company had no safe system of work for height tasks.",
+        "sourceName": "HSE",
+        "perspectiveGroup": "Batı medyası ve düşünce kuruluşları",
+        "language": "en"
+      }
+    ],
+    "mustContain": ["1.2", "8"],
+    "mustNotContain": [],
+    "maxFramingGroups": 1
+  },
+  {
+    "case_id": "enrich-005",
+    "label": "Named entities must come from the source text, not be invented",
+    "items": [
+      {
+        "title": "ICO fines recruitment agency £180,000 for failing to protect applicant data",
+        "standfirst": "A breach exposed personal data of over 12,000 job applicants, including health information; the agency had carried out no Data Protection Impact Assessment.",
+        "sourceName": "GOV.UK",
+        "perspectiveGroup": "Batı medyası ve düşünce kuruluşları",
+        "language": "en"
+      }
+    ],
+    "mustContain": ["180"],
+    "mustNotContain": ["Microsoft", "Google", "Meta"]
+  }
+]

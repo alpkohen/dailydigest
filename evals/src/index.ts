@@ -1,7 +1,29 @@
-// Suites land starting M2 (SPEC.md section 12: relevance, clustering,
-// embeddings, brief). Scaffold only for M0.
-function main() {
-  console.log("No eval suites yet. First suite (relevance) arrives in M2.");
+import { runEnrichEval } from "./enrichEval.js";
+
+const SUITES: Record<string, () => Promise<boolean>> = {
+  enrich: runEnrichEval,
+};
+
+async function main() {
+  const suiteArg = process.argv.find((a) => a.startsWith("--suite="))?.split("=")[1];
+  const suiteNames = suiteArg ? [suiteArg] : Object.keys(SUITES);
+
+  let allOk = true;
+  for (const name of suiteNames) {
+    const run = SUITES[name];
+    if (!run) {
+      console.error(`Unknown suite "${name}". Known suites: ${Object.keys(SUITES).join(", ")}`);
+      process.exit(1);
+    }
+    console.log(`\n=== ${name} ===`);
+    const ok = await run();
+    allOk = allOk && ok;
+  }
+
+  if (!allOk) process.exit(1);
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
