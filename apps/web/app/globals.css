@@ -180,6 +180,18 @@ textarea {
   text-decoration: none;
 }
 
+/* The "Ask" nav entry is a <button>, not a <Link> - reset the browser's
+   native button chrome (background, border, font) so it matches the
+   anchor-based sidebar links exactly instead of showing UA defaults. */
+button.sidebar-link {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
 .sidebar-link:hover {
   background: var(--bg-panel-alt);
   color: var(--text);

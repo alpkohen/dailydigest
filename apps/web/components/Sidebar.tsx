@@ -94,10 +94,6 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
           Reading list
           {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
         </Link>
-        <button type="button" className={`sidebar-link${askOpen ? " active" : ""}`} onClick={() => setAskOpen((v) => !v)}>
-          <IconSpark className="icon" />
-          Ask
-        </button>
       </nav>
 
       {visibleTopics.length > 0 && (
@@ -137,6 +133,11 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
           </Link>
         ))}
       </div>
+
+      <button type="button" className={`sidebar-link${askOpen ? " active" : ""}`} onClick={() => setAskOpen((v) => !v)}>
+        <IconSpark className="icon" />
+        Ask
+      </button>
 
       <div className="sidebar-footer">
         <span className="sidebar-avatar">{OWNER_INITIALS}</span>
