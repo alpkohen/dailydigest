@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { assertPublicHttpUrl } from "@dailydigest/db";
 import type { ActionResult } from "@/lib/actionResult";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -26,6 +27,14 @@ export async function createSourceAction(formData: FormData): Promise<{ error?: 
 
   if (!name) return { error: "Name is required." };
   if (!url || !/^https?:\/\//.test(url)) return { error: "Enter a valid feed URL (starting with http:// or https://)." };
+  try {
+    await assertPublicHttpUrl(url);
+  } catch (err) {
+    // SSRF guard: the worker fetches this URL server-side on a daily
+    // schedule, so a private/internal/cloud-metadata address here isn't
+    // just a bad feed - it's a standing probe of the worker's own network.
+    return { error: (err as Error).message };
+  }
 
   const weight = Number(weightRaw);
   if (Number.isNaN(weight) || weight < 0 || weight > 1) return { error: "Weight must be between 0 and 1." };

@@ -41,13 +41,17 @@ export async function runEnrichStage(env: Env, models: ModelsConfig, date: strin
   if (storiesError) throw new Error(`Failed to load stories: ${storiesError.message}`);
 
   let enriched = 0;
+  let failed = 0;
 
   await runPool((stories ?? []) as { id: string }[], CONCURRENCY, async (story) => {
     const { data: storyItems, error } = await db
       .from("story_items")
       .select("items(title, standfirst, language, sources(name, perspective_groups(name)))")
       .eq("story_id", story.id);
-    if (error || !storyItems) return;
+    if (error || !storyItems) {
+      failed++;
+      return;
+    }
 
     const items = (storyItems as unknown as StoryItemRow[])
       .map((row) => row.items)
@@ -89,14 +93,22 @@ export async function runEnrichStage(env: Env, models: ModelsConfig, date: strin
         .eq("id", story.id);
       enriched++;
     } catch (err) {
+      failed++;
       console.error(`enrich: failed enriching story ${story.id}: ${(err as Error).message}`);
     }
   });
 
+  // A code review found this always writing status "ok" even when
+  // individual stories failed (only console.error'd), giving no signal
+  // anywhere that some stories in the brief might be missing a summary.
   await db
     .from("pipeline_runs")
-    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "enrich", date, enriched } })
+    .update({
+      finished_at: new Date().toISOString(),
+      status: failed > 0 ? "partial" : "ok",
+      stats: { stage: "enrich", date, attempted: (stories ?? []).length, enriched, failed },
+    })
     .eq("id", run.id);
 
-  console.log(`enrich stage done: ${enriched} stories enriched`);
+  console.log(`enrich stage done: ${enriched} stories enriched, ${failed} failed`);
 }

@@ -8,9 +8,26 @@ import { NextResponse, type NextRequest } from "next/server";
  * session, so there is no anon-key + RLS path available, and the HMAC
  * signature (verified below, 14-day expiry) is what stands in for auth
  * here instead of a session cookie.
+ *
+ * GET never mutates anything - a code review found the old version
+ * changing data on GET, which mail clients' link-prescanning/safe-links
+ * bots can trigger without the recipient ever clicking. GET only
+ * validates the token and hands off to a confirmation page; the actual
+ * write happens in POST, triggered by a real form submission there.
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
+  const secret = process.env.HMAC_SECRET;
+  if (!token || !secret || !verifyFeedbackLink(token, secret)) {
+    return NextResponse.redirect(new URL("/feedback-confirmed?ok=false", request.url));
+  }
+
+  return NextResponse.redirect(new URL(`/feedback-confirm?token=${encodeURIComponent(token)}`, request.url));
+}
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData();
+  const token = String(formData.get("token") ?? "");
   const secret = process.env.HMAC_SECRET;
   if (!token || !secret) {
     return NextResponse.redirect(new URL("/feedback-confirmed?ok=false", request.url));
