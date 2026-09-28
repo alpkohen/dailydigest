@@ -57,6 +57,18 @@ const TABS: { key: TabKey; label: string; className?: string }[] = [
   { key: "research", label: "Research", className: "tab-research" },
 ];
 
+// Every card's own eyebrow label must use the same three words as the tabs
+// above it - it used to fall back to showing the story's topic name (or
+// "General" when the story had no topic, which was every story: found
+// live that story_topics is empty, so this fallback fired 100% of the
+// time), which meant a story sitting in the Follow-up tab could carry a
+// "General" label that had nothing to do with the tab that surfaced it.
+const SECTION_LABEL: Record<string, string> = {
+  critical: "Critical",
+  follow_up: "Follow-up",
+  worth_reading: "Worth reading",
+};
+
 function formatEdition(periodDate: string) {
   try {
     return new Date(periodDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", weekday: "long" }).toUpperCase();
@@ -309,7 +321,7 @@ export function TodayView({
               <div key={story.id} className="feed-item">
                 <div className={`feed-eyebrow${story.section === "critical" ? " critical" : story.section === "follow_up" ? " follow-up" : ""}`}>
                   <span className="dot" />
-                  {story.section === "critical" ? "Critical" : (story.topics[0]?.toUpperCase() ?? "General")}
+                  {SECTION_LABEL[story.section] ?? "Worth reading"}
                 </div>
                 <Link href={`/story/${story.id}`} className="feed-headline">
                   {story.title}
