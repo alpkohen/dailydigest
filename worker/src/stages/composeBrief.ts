@@ -16,17 +16,22 @@ async function pickOutsideRadar(
   models: ModelsConfig,
   db: ReturnType<typeof createServiceRoleClient>,
   runId: string,
+  alreadyPickedIds: Set<string>,
 ): Promise<OutsideRadarPick | null> {
   const { data: profile } = await db.from("profiles").select("interest_profile").eq("owner_id", env.OWNER_ID).maybeSingle();
 
-  const { data: candidates } = await db
+  const { data: candidateRows } = await db
     .from("items")
     .select("id, title, standfirst, url")
     .eq("owner_id", env.OWNER_ID)
     .eq("status", "not_relevant")
     .order("created_at", { ascending: false })
-    .limit(30);
-  if (!candidates || candidates.length === 0) return null;
+    .limit(60);
+  // Fetch extra and filter client-side rather than a .not("id","in",...)
+  // filter, which gets unwieldy once alreadyPickedIds grows past a few
+  // dozen entries - simpler to over-fetch than build a huge NOT IN list.
+  const candidates = (candidateRows ?? []).filter((c) => !alreadyPickedIds.has(c.id)).slice(0, 30);
+  if (candidates.length === 0) return null;
 
   try {
     const result = await callLlm({
@@ -55,16 +60,18 @@ async function pickOutsideRadar(
 async function fetchWatchlistItems(
   env: Env,
   db: ReturnType<typeof createServiceRoleClient>,
+  alreadyShownIds: Set<string>,
 ): Promise<{ id: string; title: string; url: string; watchName: string }[]> {
   const { data: rows } = await db
     .from("watch_items")
     .select("watches(name), items(id, title, url)")
     .eq("owner_id", env.OWNER_ID)
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(30);
 
   return ((rows ?? []) as unknown as { watches: { name: string } | null; items: { id: string; title: string; url: string } | null }[])
-    .filter((r) => r.items)
+    .filter((r) => r.items && !alreadyShownIds.has(r.items.id))
+    .slice(0, 10)
     .map((r) => ({ id: r.items!.id, title: r.items!.title, url: r.items!.url, watchName: r.watches?.name ?? "?" }));
 }
 
@@ -121,6 +128,19 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
     .eq("owner_id", env.OWNER_ID);
   const briefedIds = new Set((alreadyBriefed ?? []).map((r) => r.story_id));
 
+  // Item #7 from a 2026-09-28 code review: research items, the
+  // outside-radar pick, and watchlist items had no equivalent of
+  // brief_stories tracking them across days, so the same one could
+  // resurface in a later brief. brief_content_refs (migration 0022) is
+  // that tracking, one row per content type per ref actually used.
+  const { data: usedRefRows } = await db
+    .from("brief_content_refs")
+    .select("content_type, ref_id")
+    .eq("owner_id", env.OWNER_ID);
+  const usedResearchIds = new Set((usedRefRows ?? []).filter((r) => r.content_type === "research_item").map((r) => r.ref_id));
+  const usedOutsideRadarIds = new Set((usedRefRows ?? []).filter((r) => r.content_type === "outside_radar").map((r) => r.ref_id));
+  const usedWatchlistIds = new Set((usedRefRows ?? []).filter((r) => r.content_type === "watchlist_item").map((r) => r.ref_id));
+
   const { data: storyRows, error: storiesError } = await db
     .from("stories")
     .select("id, title, summary, tier, story_topics(topics(name))")
@@ -138,7 +158,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
     .eq("owner_id", env.OWNER_ID)
     .not("argument", "is", null);
   if (researchError) throw new Error(`Failed to load research_items: ${researchError.message}`);
-  const researchItems = (researchRows ?? []) as unknown as ResearchRow[];
+  const researchItems = ((researchRows ?? []) as unknown as ResearchRow[]).filter((r) => !usedResearchIds.has(r.id));
 
   if (stories.length === 0 && researchItems.length === 0) {
     console.log("compose_brief: nothing new to compose");
@@ -194,8 +214,8 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const storyById = new Map(stories.map((s) => [s.id, s]));
   const researchById = new Map(researchItems.map((r) => [r.id, r]));
-  const outsideRadar = await pickOutsideRadar(env, models, db, run.id);
-  const watchlist = await fetchWatchlistItems(env, db);
+  const outsideRadar = await pickOutsideRadar(env, models, db, run.id, usedOutsideRadarIds);
+  const watchlist = await fetchWatchlistItems(env, db, usedWatchlistIds);
 
   const content = {
     headline: composed.headline,
@@ -215,26 +235,52 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
     watchlist,
   };
 
-  const { data: brief, error: briefError } = await db
-    .from("briefs")
-    .insert({ owner_id: env.OWNER_ID, kind: "daily", period_date: date, content, status: "ready" })
-    .select("id")
-    .single();
-  if (briefError || !brief) throw new Error(`Failed to insert brief: ${briefError?.message}`);
-
   let position = 0;
   const briefStoryRows = composed.sections
     .filter((s) => s.section !== "new_research")
-    .flatMap((section) => section.story_ids.map((storyId) => ({ owner_id: env.OWNER_ID, brief_id: brief.id, story_id: storyId, section: section.section, position: position++ })));
-  if (briefStoryRows.length > 0) {
-    const { error } = await db.from("brief_stories").insert(briefStoryRows);
-    if (error) console.error(`compose_brief: failed to insert brief_stories: ${error.message}`);
+    .flatMap((section) => section.story_ids.map((storyId) => ({ story_id: storyId, section: section.section, position: position++ })));
+
+  // Only research items the model actually chose (the "new_research"
+  // section's story_ids) count as "used" - not every candidate that was
+  // offered to it, mirroring how briefStoryRows only records chosen
+  // stories, not every candidate story.
+  const chosenResearchIds = composed.sections.find((s) => s.section === "new_research")?.story_ids ?? [];
+  const contentRefs = [
+    ...chosenResearchIds.map((id) => ({ content_type: "research_item", ref_id: id })),
+    ...(outsideRadar ? [{ content_type: "outside_radar", ref_id: outsideRadar.id }] : []),
+    ...watchlist.map((w) => ({ content_type: "watchlist_item", ref_id: w.id })),
+  ];
+
+  // The brief and its brief_stories/brief_content_refs rows must land
+  // together: with separate inserts, a failure partway through used to
+  // leave a "ready" brief on the shelf (deliver would still send it)
+  // whose content was never recorded as shown, letting it resurface in a
+  // later brief. create_daily_brief (migrations 0021, 0022) wraps all
+  // three in one function call, which Postgres runs as a single implicit
+  // transaction.
+  const { data: briefId, error: briefError } = await db.rpc("create_daily_brief", {
+    p_owner_id: env.OWNER_ID,
+    p_period_date: date,
+    p_content: content,
+    p_brief_stories: briefStoryRows,
+    p_content_refs: contentRefs,
+  });
+  if (briefError || !briefId) {
+    await db
+      .from("pipeline_runs")
+      .update({
+        finished_at: new Date().toISOString(),
+        status: "failed",
+        stats: { stage: "compose_brief", date, composed: false, error: briefError?.message },
+      })
+      .eq("id", run.id);
+    throw new Error(`Failed to create brief: ${briefError?.message}`);
   }
 
   await db
     .from("pipeline_runs")
-    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "compose_brief", date, composed: true, briefId: brief.id } })
+    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "compose_brief", date, composed: true, briefId } })
     .eq("id", run.id);
 
-  console.log(`compose_brief stage done: brief ${brief.id} created with ${stories.length} stories and ${researchItems.length} research items`);
+  console.log(`compose_brief stage done: brief ${briefId} created with ${stories.length} stories and ${researchItems.length} research items`);
 }
