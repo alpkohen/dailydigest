@@ -6,7 +6,12 @@ import { fetchFewShotExamples } from "../lib/fewShot.js";
 import { runPool } from "../lib/pool.js";
 
 const PAGE_SIZE = 1000;
-const CONCURRENCY = 15;
+// Was 15 - the highest of any stage, and a full-system audit found this
+// stage failing ~39% of its LLM calls over 30 days (2929/7575), almost
+// certainly this pool outrunning the fast-role model's rate limit and the
+// one immediate retry landing on the same limit. Matched to the other
+// per-item LLM stages (enrich, questionEvidence) instead of standing out.
+const CONCURRENCY = 8;
 
 interface TopicRow {
   id: string;

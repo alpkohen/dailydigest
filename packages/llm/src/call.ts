@@ -55,8 +55,16 @@ export async function callLlm<T>(params: CallLlmParams<T>): Promise<T> {
 
   const startedAt = Date.now();
   let lastError: Error | undefined;
+  const maxAttempts = 3;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      // Jittered exponential backoff: a bare immediate retry tends to land
+      // on the exact same rate limit it just tripped, especially when many
+      // items are being scored concurrently (e.g. relevance's worker pool).
+      const backoffMs = 300 * 2 ** (attempt - 1) + Math.random() * 300;
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
     try {
       const result = await provider.complete({
         model: roleConfig.model,
@@ -101,9 +109,10 @@ export async function callLlm<T>(params: CallLlmParams<T>): Promise<T> {
     costUsd: 0,
     latencyMs: Date.now() - startedAt,
     ok: false,
+    error: lastError?.message?.slice(0, 500),
   });
 
   throw new Error(
-    `callLlm failed for prompt "${params.promptName}" after retry: ${lastError?.message}`,
+    `callLlm failed for prompt "${params.promptName}" after ${maxAttempts} attempts: ${lastError?.message}`,
   );
 }

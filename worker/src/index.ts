@@ -1,3 +1,4 @@
+import { createServiceRoleClient } from "@dailydigest/db";
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
 import { runClusterStage } from "./stages/cluster.js";
@@ -91,6 +92,25 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// A stage that crashes or gets killed (CI timeout, manual kill) leaves its
+// pipeline_runs row in "running" forever, since only the normal completion
+// path ever sets finished_at/status. A full-system audit found runs stuck
+// like this with no way to tell whether they were still in progress or long
+// dead. Anything still "running" from before this process started is
+// necessarily dead, since only one worker invocation runs at a time here.
+const STUCK_RUN_HOURS = 6;
+
+async function reclaimStuckRuns(env: Env): Promise<void> {
+  const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const cutoff = new Date(Date.now() - STUCK_RUN_HOURS * 60 * 60 * 1000).toISOString();
+  await db
+    .from("pipeline_runs")
+    .update({ finished_at: new Date().toISOString(), status: "failed" })
+    .eq("owner_id", env.OWNER_ID)
+    .eq("status", "running")
+    .lt("started_at", cutoff);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const date = args.get("date") ?? today();
@@ -104,6 +124,7 @@ async function main() {
 
   const env = loadEnv();
   const config = await loadWorkerConfig();
+  await reclaimStuckRuns(env);
 
   const stagesToRun = runAll ? ALL_STAGE_ORDER : [stage as string];
   for (const name of stagesToRun) {

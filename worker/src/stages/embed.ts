@@ -8,9 +8,14 @@ const ITEMS_PER_JOB = 50;
 const EMBED_WORD_LIMIT = 500;
 // Hard safety net on top of the word cap: OpenAI's embedding endpoint caps
 // input at 8192 tokens, and some extracted pages (live blogs, malformed
-// whitespace) can blow past 500 "words" worth of tokens. ~4 chars/token is
-// a conservative estimate, so this stays well under the limit.
-const EMBED_CHAR_LIMIT = 20_000;
+// whitespace) can blow past 500 "words" worth of tokens - e.g. a page with
+// long unbroken runs of characters (URLs, hashes, garbled extraction)
+// counts as very few "words" by whitespace-splitting but can still be
+// extremely token-dense. A full-system audit found this cap (originally
+// 20,000, assuming ~4 chars/token) was still letting real items through
+// that exceeded 8192 tokens; halved for real headroom rather than trying
+// to guess the exact ratio for every language/content shape this app sees.
+const EMBED_CHAR_LIMIT = 10_000;
 
 export function embeddingInput(title: string, text: string | null): string {
   if (!text) return title.slice(0, EMBED_CHAR_LIMIT);

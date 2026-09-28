@@ -11,6 +11,7 @@ export interface LogCallParams {
   costUsd: number;
   latencyMs: number;
   ok: boolean;
+  error?: string;
 }
 
 export async function logLlmCall(client: SupabaseClient, params: LogCallParams): Promise<void> {
@@ -25,6 +26,7 @@ export async function logLlmCall(client: SupabaseClient, params: LogCallParams):
     cost_usd: params.costUsd,
     latency_ms: params.latencyMs,
     ok: params.ok,
+    error: params.error ?? null,
   });
 
   if (error) {

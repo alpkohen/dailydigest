@@ -11,6 +11,7 @@ interface LlmCallRow {
   cost_usd: number;
   latency_ms: number | null;
   ok: boolean;
+  error: string | null;
   created_at: string;
 }
 
@@ -28,16 +29,25 @@ export default async function AiActivityPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Unbounded (within the 30-day window) so the aggregate stats below are
-  // real totals, not just a sum over whatever fit in the recent-calls table.
-  const { data: rows } = await supabase
-    .from("llm_calls")
-    .select("id, stage, prompt_name, model, input_tokens, output_tokens, cost_usd, latency_ms, ok, created_at")
-    .gte("created_at", thirtyDaysAgo)
-    .order("created_at", { ascending: false })
-    .limit(5000);
-
-  const calls = (rows ?? []) as LlmCallRow[];
+  // PostgREST caps any single select at a server-side max-rows setting
+  // (1000 here) regardless of the .limit() passed from the client - a
+  // full-system audit found this page silently under-reporting by ~7x
+  // (showed 1000 calls / 547 failed when the real 30-day totals were 7710
+  // / 2959) because a single query with .limit(5000) still only got the
+  // first 1000 rows back. Paginating with .range() until a short page
+  // is the only way to get every row.
+  const PAGE_SIZE = 1000;
+  const calls: LlmCallRow[] = [];
+  for (let page = 0; ; page++) {
+    const { data } = await supabase
+      .from("llm_calls")
+      .select("id, stage, prompt_name, model, input_tokens, output_tokens, cost_usd, latency_ms, ok, error, created_at")
+      .gte("created_at", thirtyDaysAgo)
+      .order("created_at", { ascending: false })
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+    calls.push(...((data ?? []) as LlmCallRow[]));
+    if (!data || data.length < PAGE_SIZE) break;
+  }
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -165,7 +175,15 @@ export default async function AiActivityPage() {
                     <td className="text-faint">{c.model}</td>
                     <td>{c.input_tokens + c.output_tokens}</td>
                     <td>${Number(c.cost_usd).toFixed(4)}</td>
-                    <td>{c.ok ? <span className="badge badge-accent">ok</span> : <span className="badge badge-danger">failed</span>}</td>
+                    <td>
+                      {c.ok ? (
+                        <span className="badge badge-accent">ok</span>
+                      ) : (
+                        <span className="badge badge-danger" title={c.error ?? undefined}>
+                          failed{c.error ? `: ${c.error.slice(0, 60)}` : ""}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

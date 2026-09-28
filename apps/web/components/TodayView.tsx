@@ -142,14 +142,21 @@ export function TodayView({
 }) {
   const [tab, setTab] = useState<TabKey>("all");
   const [topicFilter, setTopicFilter] = useState<string>("all");
+  // A time-of-day greeting ("Good evening") only makes sense for the brief
+  // being read as it lands. A full-system audit found it showing up on past
+  // briefs too (e.g. "Rise and shine" at 9pm while reading last week's
+  // edition), since it was computed from the current clock, not the brief's
+  // own date. Archived editions get a fixed, date-agnostic title instead.
+  const isToday = useMemo(() => periodDate === new Date().toISOString().slice(0, 10), [periodDate]);
+
   // Randomised per load, but the pick must not differ between the server
   // render and the client's first render or React logs a hydration
   // mismatch (and briefly flashes the wrong text). Render a fixed greeting
   // on both, then swap in the random pick only after mount.
   const [greeting, setGreeting] = useState(`Hello, ${OWNER_FIRST_NAME} 🌸.`);
   useEffect(() => {
-    setGreeting(pickGreeting(OWNER_FIRST_NAME));
-  }, []);
+    if (isToday) setGreeting(pickGreeting(OWNER_FIRST_NAME));
+  }, [isToday]);
 
   const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
   const savedStorySet = useMemo(() => new Set(savedStoryIds), [savedStoryIds]);
@@ -181,7 +188,7 @@ export function TodayView({
         <span className="top-meta-tagline">The world&apos;s daily briefing, minus the drama.</span>
         <span className="top-meta-status">
           <span className="status-dot" />
-          Today&apos;s edition
+          {isToday ? "Today’s edition" : "Archived edition"}
         </span>
       </div>
 
@@ -190,7 +197,7 @@ export function TodayView({
           <div className="today-header">
             <div>
               <p className="eyebrow">{formatEdition(periodDate)}</p>
-              <h1 className="greeting-title">{greeting}</h1>
+              <h1 className="greeting-title">{isToday ? greeting : `World Brief, ${OWNER_FIRST_NAME}.`}</h1>
               <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "4px 0 0" }}>The developments shaping the world. What they mean for you.</p>
             </div>
             <div className="today-header-stat">
