@@ -382,6 +382,177 @@ button.sidebar-link {
   text-decoration: underline;
 }
 
+/* Brief history */
+
+.brief-history-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brief-history-heading .eyebrow {
+  margin: 0 0 8px;
+}
+
+.brief-history-total {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding-bottom: 4px;
+}
+
+.brief-history-total-number {
+  color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: 30px;
+}
+
+.brief-history-total-label {
+  color: var(--text-faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.brief-history-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 28px 0 32px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--border);
+}
+
+.brief-history-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 72px;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+}
+
+.brief-history-stat-label,
+.brief-history-card-meta {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.brief-history-stat-value {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.brief-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.brief-history-card {
+  display: grid;
+  grid-template-columns: 135px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 86px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.brief-history-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-panel-hover);
+  transform: translateY(-1px);
+}
+
+.brief-history-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 15px;
+}
+
+.brief-history-kind {
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brief-history-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brief-history-card-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brief-history-card-end {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brief-history-arrow {
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.brief-history-empty {
+  margin-top: 32px;
+  padding: 28px;
+  text-align: center;
+}
+
+.brief-history-empty-mark {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 24px;
+}
+
+.brief-history-empty .h2-section {
+  margin-bottom: 8px;
+}
+
+.brief-history-empty .btn {
+  display: inline-block;
+  margin-top: 12px;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .brief-history-heading {
+    align-items: flex-start;
+  }
+
+  .brief-history-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .brief-history-card {
+    grid-template-columns: 1fr auto;
+    gap: 10px 16px;
+  }
+
+  .brief-history-date {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Panels & cards */
 
 .panel {
