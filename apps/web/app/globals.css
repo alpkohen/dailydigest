@@ -1059,7 +1059,7 @@ button.sidebar-link {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-faint);
+  color: var(--text-dim);
   margin-bottom: 8px;
 }
 
@@ -1067,7 +1067,7 @@ button.sidebar-link {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--text-faint);
+  background: var(--text-dim);
 }
 
 .feed-eyebrow.critical {
