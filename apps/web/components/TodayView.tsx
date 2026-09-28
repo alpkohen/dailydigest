@@ -279,16 +279,18 @@ export function TodayView({
 
           <hr className="hr" />
 
-          <section>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-              <h2 className="h2-section framing-heading">
-                <IconFrame className="framing-icon" />
-                Today&apos;s Framing
-              </h2>
-              <AiTag label="AI-written" />
-            </div>
-            <p className="dek" lang="tr">{headline}</p>
-          </section>
+          {tab === "all" && (
+            <section>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <h2 className="h2-section framing-heading">
+                  <IconFrame className="framing-icon" />
+                  Today&apos;s Framing
+                </h2>
+                <AiTag label="AI-written" />
+              </div>
+              <p className="dek" lang="tr">{headline}</p>
+            </section>
+          )}
 
           <div>
             {leadStory && (
