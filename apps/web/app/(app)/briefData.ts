@@ -98,8 +98,8 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
     ? { title: content.outsideRadar.title, reason: content.outsideRadar.reason, url: content.outsideRadar.url }
     : null;
 
-  // Rail widget: most recently touched active question that has at least
-  // one piece of evidence, so the link always resolves to a real story.
+  // Keep a tracked question visible even when this edition has no new
+  // evidence. Previously the entire rail disappeared in that case.
   let questionWidget: TodayQuestionWidget | null = null;
   const { data: activeQuestions } = await supabase
     .from("questions")
@@ -108,12 +108,25 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
     .order("updated_at", { ascending: false })
     .limit(5);
 
+  const firstQuestion = activeQuestions?.[0];
+  if (firstQuestion) {
+    questionWidget = {
+      questionId: firstQuestion.id,
+      text: firstQuestion.text,
+      note: "No new evidence was linked to this edition yet.",
+      storyId: null,
+      storyTitle: null,
+    };
+  }
+
   for (const q of activeQuestions ?? []) {
     const { data: evidence } = await supabase
       .from("question_evidence")
       .select("note, stories(id, title)")
       .eq("question_id", q.id)
-      .eq("relevant", true)
+      // Relevant evidence always has a note. This also keeps the brief
+      // readable while older databases wait for the latest migration.
+      .not("note", "is", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

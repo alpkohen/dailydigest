@@ -44,8 +44,8 @@ export interface TodayQuestionWidget {
   questionId: string;
   text: string;
   note: string;
-  storyId: string;
-  storyTitle: string;
+  storyId: string | null;
+  storyTitle: string | null;
 }
 
 type TabKey = "all" | "critical" | "follow_up" | "research";
@@ -362,8 +362,8 @@ export function TodayView({
                 </div>
                 <p className="rail-card-title-v2" lang="tr" style={{ marginTop: 8 }}>{questionWidget.text}</p>
                 <p className="rail-card-desc" lang="tr">{questionWidget.note}</p>
-                <Link href={`/story/${questionWidget.storyId}`} className="rail-card-link">
-                  Related development <IconArrowRight />
+                <Link href={questionWidget.storyId ? `/story/${questionWidget.storyId}` : `/questions/${questionWidget.questionId}`} className="rail-card-link">
+                  {questionWidget.storyId ? "Related development" : "View tracked question"} <IconArrowRight />
                 </Link>
               </div>
             )}
