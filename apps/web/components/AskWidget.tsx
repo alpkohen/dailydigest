@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Component, type ErrorInfo, type ReactNode, useState, useTransition } from "react";
 import { askArchiveAction, type SearchResultItem } from "@/app/(app)/archive/actions";
 import { AiTag } from "./AiTag";
 
@@ -9,6 +9,34 @@ interface Exchange {
   answer?: string;
   citations?: SearchResultItem[];
   error?: string;
+}
+
+interface AskErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface AskErrorBoundaryState {
+  hasError: boolean;
+}
+
+/** Keeps an isolated Ask rendering failure from taking down the app shell. */
+export class AskErrorBoundary extends Component<AskErrorBoundaryProps, AskErrorBoundaryState> {
+  state: AskErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): AskErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Ask panel failed to render:", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="ask-widget-fallback">Ask is temporarily unavailable. Reload the page to try again.</div>;
+    }
+    return this.props.children;
+  }
 }
 
 /**

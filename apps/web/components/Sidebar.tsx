@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AskPanel } from "./AskWidget";
+import { AskErrorBoundary, AskPanel } from "./AskWidget";
 import { IconArchive, IconBookmark, IconChevronDown, IconClose, IconMenu, IconSpark, IconToday } from "./icons";
 
 const PRIMARY_LINKS = [
@@ -147,7 +147,9 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
         <span className="sidebar-ask-arrow" aria-hidden="true">↗</span>
       </button>
 
-      <AskPanel open={askOpen} onClose={() => setAskOpen(false)} />
+      <AskErrorBoundary>
+        <AskPanel open={askOpen} onClose={() => setAskOpen(false)} />
+      </AskErrorBoundary>
     </aside>
   );
 }

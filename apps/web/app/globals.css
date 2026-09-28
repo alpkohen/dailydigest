@@ -1306,6 +1306,22 @@ a.feed-headline:hover {
   overflow: hidden;
 }
 
+.ask-widget-fallback {
+  position: fixed;
+  left: 268px;
+  bottom: 24px;
+  z-index: 40;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  font-size: 13px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
 .ask-widget-close {
   background: none;
   border: none;
@@ -1367,7 +1383,8 @@ a.feed-headline:hover {
 }
 
 @media (max-width: 860px) {
-  .ask-widget-panel {
+  .ask-widget-panel,
+  .ask-widget-fallback {
     left: 16px;
     right: 16px;
     bottom: 16px;
