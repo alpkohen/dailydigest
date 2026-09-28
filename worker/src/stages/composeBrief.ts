@@ -215,26 +215,39 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
     watchlist,
   };
 
-  const { data: brief, error: briefError } = await db
-    .from("briefs")
-    .insert({ owner_id: env.OWNER_ID, kind: "daily", period_date: date, content, status: "ready" })
-    .select("id")
-    .single();
-  if (briefError || !brief) throw new Error(`Failed to insert brief: ${briefError?.message}`);
-
   let position = 0;
   const briefStoryRows = composed.sections
     .filter((s) => s.section !== "new_research")
-    .flatMap((section) => section.story_ids.map((storyId) => ({ owner_id: env.OWNER_ID, brief_id: brief.id, story_id: storyId, section: section.section, position: position++ })));
-  if (briefStoryRows.length > 0) {
-    const { error } = await db.from("brief_stories").insert(briefStoryRows);
-    if (error) console.error(`compose_brief: failed to insert brief_stories: ${error.message}`);
+    .flatMap((section) => section.story_ids.map((storyId) => ({ story_id: storyId, section: section.section, position: position++ })));
+
+  // The brief and its brief_stories rows must land together: with two
+  // separate inserts, a brief_stories failure used to leave a "ready"
+  // brief on the shelf (deliver would still send it) whose stories were
+  // never recorded as briefed, letting the same stories resurface in a
+  // later brief. create_daily_brief (migration 0021) wraps both in one
+  // function call, which Postgres runs as a single implicit transaction.
+  const { data: briefId, error: briefError } = await db.rpc("create_daily_brief", {
+    p_owner_id: env.OWNER_ID,
+    p_period_date: date,
+    p_content: content,
+    p_brief_stories: briefStoryRows,
+  });
+  if (briefError || !briefId) {
+    await db
+      .from("pipeline_runs")
+      .update({
+        finished_at: new Date().toISOString(),
+        status: "failed",
+        stats: { stage: "compose_brief", date, composed: false, error: briefError?.message },
+      })
+      .eq("id", run.id);
+    throw new Error(`Failed to create brief: ${briefError?.message}`);
   }
 
   await db
     .from("pipeline_runs")
-    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "compose_brief", date, composed: true, briefId: brief.id } })
+    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "compose_brief", date, composed: true, briefId } })
     .eq("id", run.id);
 
-  console.log(`compose_brief stage done: brief ${brief.id} created with ${stories.length} stories and ${researchItems.length} research items`);
+  console.log(`compose_brief stage done: brief ${briefId} created with ${stories.length} stories and ${researchItems.length} research items`);
 }
