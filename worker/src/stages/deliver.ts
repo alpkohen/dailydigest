@@ -31,6 +31,15 @@ function formatDateLabel(dateStr: string): string {
   return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseRecipients(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => EMAIL_PATTERN.test(s));
+}
+
 function subjectFor(content: BriefContent, dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
@@ -65,7 +74,8 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
   const dateLabel = formatDateLabel(date);
   const { html, text } = await renderDailyBrief(content, dateLabel);
 
-  if (!env.RESEND_API_KEY || !env.BRIEF_RECIPIENT_EMAIL) {
+  const recipients = env.BRIEF_RECIPIENT_EMAIL ? parseRecipients(env.BRIEF_RECIPIENT_EMAIL) : [];
+  if (!env.RESEND_API_KEY || recipients.length === 0) {
     console.log("deliver: RESEND_API_KEY or BRIEF_RECIPIENT_EMAIL not set, storing rendered html without sending");
     await db.from("briefs").update({ html }).eq("id", brief.id);
     return;
@@ -77,7 +87,7 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
     // undefined, so `?? default` silently passed "" as the from address
     // (Resend's actual error: "The domain is invalid"). `||` catches both.
     from: env.RESEND_FROM_EMAIL || "World Brief <onboarding@resend.dev>",
-    to: env.BRIEF_RECIPIENT_EMAIL,
+    to: recipients,
     subject: subjectFor(content, date),
     html,
     text,

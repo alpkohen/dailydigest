@@ -13,9 +13,11 @@ const envSchema = z.object({
   EXA_API_KEY: z.string().optional(),
   // Optional: deliver stage skips sending (brief stays "ready") when unset.
   RESEND_API_KEY: z.string().optional(),
-  // Where the brief is sent. No signup/allowlist flow exists yet, so this
-  // defaults to the same address as the owner allowlist.
-  BRIEF_RECIPIENT_EMAIL: z.string().email().optional(),
+  // Where the brief is sent. Comma-separated for more than one recipient
+  // (SPEC.md still assumes one owner, but nothing stops CCing e.g. a
+  // colleague on the daily send) - deliver.ts splits and validates each
+  // address, so this stays a plain string rather than z.string().email().
+  BRIEF_RECIPIENT_EMAIL: z.string().min(1).optional(),
   // Defaults to Resend's shared test sender until a custom domain is
   // verified (SPEC.md section 15, open decision #6).
   RESEND_FROM_EMAIL: z.string().optional(),
