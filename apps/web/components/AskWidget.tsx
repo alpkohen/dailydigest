@@ -31,8 +31,14 @@ export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void
     if (!q || pending) return;
     setQuestion("");
     startTransition(async () => {
-      const result = await askArchiveAction(q);
-      setExchanges((prev) => [...prev, { question: q, answer: result.answer, citations: result.citations, error: result.error }]);
+      try {
+        const result = await askArchiveAction(q);
+        setExchanges((prev) => [...prev, { question: q, answer: result.answer, citations: result.citations, error: result.error }]);
+      } catch {
+        // A failed server action should stay inside the Ask panel instead of
+        // taking down the whole Next.js application shell.
+        setExchanges((prev) => [...prev, { question: q, error: "The archive could not answer right now. Please try again in a moment." }]);
+      }
     });
   };
 

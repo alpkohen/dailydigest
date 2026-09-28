@@ -22,6 +22,16 @@ export interface SearchResultItem {
   score: number;
 }
 
+interface RpcSearchResult {
+  id: string;
+  title: string;
+  standfirst: string | null;
+  url: string;
+  language: string | null;
+  published_at: string | null;
+  score: number;
+}
+
 /** SPEC.md section 4.11: hybrid search (pgvector + full text) via the search_items RPC. */
 export async function searchArchiveAction(query: string): Promise<{ results?: SearchResultItem[]; error?: string }> {
   if (!query.trim()) return { results: [] };
@@ -74,66 +84,80 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return { error: "Oturum bulunamadı." };
 
-  const rateLimit = await consumeRateLimit(supabase, userData.user.id, "ask_archive", ASK_RATE_LIMIT.max, ASK_RATE_LIMIT.windowSeconds);
-  if (!rateLimit.allowed) return { error: "Too many questions - wait a minute and try again." };
+  try {
+    const rateLimit = await consumeRateLimit(supabase, userData.user.id, "ask_archive", ASK_RATE_LIMIT.max, ASK_RATE_LIMIT.windowSeconds);
+    if (!rateLimit.allowed) return { error: "Too many questions - wait a minute and try again." };
 
-  const { models } = await loadWebConfig();
+    const { models } = await loadWebConfig();
 
-  const [queryEmbedding] = await embedTexts({
-    texts: [question],
-    embedding: models.embedding,
-    prices: models.prices_per_million_tokens,
-    apiKeys: { openai: process.env.OPENAI_API_KEY },
-    db: supabase,
-    ownerId: userData.user.id,
-    stage: "ask_archive",
-  });
+    const [queryEmbedding] = await embedTexts({
+      texts: [question],
+      embedding: models.embedding,
+      prices: models.prices_per_million_tokens,
+      apiKeys: { openai: process.env.OPENAI_API_KEY },
+      db: supabase,
+      ownerId: userData.user.id,
+      stage: "ask_archive",
+    });
 
-  const { data: candidates, error: searchError } = await supabase.rpc("search_items", {
-    p_owner_id: userData.user.id,
-    p_query_embedding: queryEmbedding,
-    p_query_text: question,
-    p_match_count: 15,
-  });
-  if (searchError) return { error: searchError.message };
-  // Used to return early here with "not enough evidence" whenever the
-  // archive search matched nothing - but buildAskPrompt now also answers
-  // questions about World Brief itself (from its built-in APP_INFO
-  // block), and those never match a news-archive search. Always reach the
-  // LLM; it decides which context (archive items or app info) applies.
-  const indexed = (candidates ?? []).map((c: SearchResultItem, i: number) => ({ index: i + 1, ...c }));
+    const { data: candidates, error: searchError } = await supabase.rpc("search_items", {
+      p_owner_id: userData.user.id,
+      p_query_embedding: queryEmbedding,
+      p_query_text: question,
+      p_match_count: 15,
+    });
+    if (searchError) throw new Error(searchError.message);
 
-  const result = await callLlm({
-    role: "strong",
-    promptName: "ask",
-    prompt: buildAskPrompt({
-      question,
-      items: indexed.map((c: SearchResultItem & { index: number }) => ({
-        index: c.index,
-        title: c.title,
-        standfirst: c.standfirst,
-        publishedAt: c.publishedAt,
-      })),
-    }),
-    schema: askSchema,
-    modelsConfig: models,
-    apiKeys: { anthropic: process.env.ANTHROPIC_API_KEY, openai: process.env.OPENAI_API_KEY },
-    db: supabase,
-    ownerId: userData.user.id,
-    stage: "ask_archive",
-    maxTokens: 1024,
-  });
+    // The RPC returns snake_case database fields. Normalize them before
+    // building the prompt so citations and dates stay aligned with the UI.
+    const indexed: (SearchResultItem & { index: number })[] = (candidates as RpcSearchResult[] ?? []).map((c: RpcSearchResult, i: number) => ({
+      index: i + 1,
+      id: c.id,
+      title: c.title,
+      standfirst: c.standfirst,
+      url: c.url,
+      language: c.language,
+      publishedAt: c.published_at,
+      score: c.score,
+    }));
 
-  const citedIndices = new Set(result.citation_indices);
-  const citations = indexed.filter((c: SearchResultItem & { index: number }) => citedIndices.has(c.index));
+    // Always reach the LLM, even when archive search returns no items. The
+    // prompt also handles questions about World Brief itself.
+    const result = await callLlm({
+      role: "strong",
+      promptName: "ask",
+      prompt: buildAskPrompt({
+        question,
+        items: indexed.map((c) => ({
+          index: c.index,
+          title: c.title,
+          standfirst: c.standfirst,
+          publishedAt: c.publishedAt,
+        })),
+      }),
+      schema: askSchema,
+      modelsConfig: models,
+      apiKeys: { anthropic: process.env.ANTHROPIC_API_KEY, openai: process.env.OPENAI_API_KEY },
+      db: supabase,
+      ownerId: userData.user.id,
+      stage: "ask_archive",
+      maxTokens: 1024,
+    });
 
-  const { data: thread } = await supabase.from("ask_threads").insert({ owner_id: userData.user.id, scope: "archive" }).select("id").single();
-  if (thread) {
-    await supabase.from("ask_messages").insert([
-      { owner_id: userData.user.id, thread_id: thread.id, role: "user", content: question },
-      { owner_id: userData.user.id, thread_id: thread.id, role: "assistant", content: result.answer, citations: citations.map((c: SearchResultItem) => c.id) },
-    ]);
+    const citedIndices = new Set(result.citation_indices);
+    const citations = indexed.filter((c) => citedIndices.has(c.index));
+
+    const { data: thread } = await supabase.from("ask_threads").insert({ owner_id: userData.user.id, scope: "archive" }).select("id").single();
+    if (thread) {
+      await supabase.from("ask_messages").insert([
+        { owner_id: userData.user.id, thread_id: thread.id, role: "user", content: question },
+        { owner_id: userData.user.id, thread_id: thread.id, role: "assistant", content: result.answer, citations: citations.map((c) => c.id) },
+      ]);
+    }
+
+    return { answer: result.answer, citations };
+  } catch (error) {
+    console.error("ask_archive failed:", error instanceof Error ? error.message : error);
+    return { error: "The archive could not answer right now. Please try again in a moment." };
   }
-
-  return { answer: result.answer, citations };
 }
