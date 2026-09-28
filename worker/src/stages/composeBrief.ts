@@ -91,39 +91,14 @@ interface ResearchRow {
 }
 
 /**
- * A story clusters several source items; the brief links through to one of
- * them (CLAUDE.md rule 6: emails show our own summary plus a link to the
- * original). Picks the earliest-published item as the closest thing to the
- * original report, falling back to whichever item has no published_at.
+ * A story clusters several source items, and its own page (apps/web
+ * story/[id]) already lists every one of them with a link to the original
+ * (CLAUDE.md rule 6) plus the enrichment (what changed, why it matters,
+ * framing) the raw article doesn't have - so the brief links titles there
+ * rather than out to a single source directly.
  */
-async function fetchStoryUrls(
-  db: ReturnType<typeof createServiceRoleClient>,
-  storyIds: string[],
-): Promise<Map<string, string>> {
-  if (storyIds.length === 0) return new Map();
-  const { data: rows } = await db
-    .from("story_items")
-    .select("story_id, items(url, published_at)")
-    .in("story_id", storyIds);
-
-  const byStory = new Map<string, { url: string; publishedAt: string | null }[]>();
-  for (const r of (rows ?? []) as unknown as { story_id: string; items: { url: string; published_at: string | null } | null }[]) {
-    if (!r.items) continue;
-    const list = byStory.get(r.story_id) ?? [];
-    list.push({ url: r.items.url, publishedAt: r.items.published_at });
-    byStory.set(r.story_id, list);
-  }
-
-  const result = new Map<string, string>();
-  for (const [storyId, items] of byStory) {
-    const earliest = items.reduce((best, cur) => {
-      if (!best.publishedAt) return best;
-      if (!cur.publishedAt) return best;
-      return cur.publishedAt < best.publishedAt ? cur : best;
-    }, items[0]!);
-    result.set(storyId, earliest.url);
-  }
-  return result;
+function storyUrl(env: Env, storyId: string): string {
+  return `${env.WEB_APP_URL}/story/${storyId}`;
 }
 
 /**
@@ -250,7 +225,6 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const storyById = new Map(stories.map((s) => [s.id, s]));
   const researchById = new Map(researchItems.map((r) => [r.id, r]));
-  const storyUrlById = await fetchStoryUrls(db, stories.map((s) => s.id));
   const outsideRadar = await pickOutsideRadar(env, models, db, run.id, usedOutsideRadarIds);
   const watchlist = await fetchWatchlistItems(env, db, usedWatchlistIds);
 
@@ -271,7 +245,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
               id,
               title: storyById.get(id)?.title,
               summary: storyById.get(id)?.summary,
-              url: storyUrlById.get(id),
+              url: storyById.has(id) ? storyUrl(env, id) : undefined,
             })),
     })),
     outsideRadar,
