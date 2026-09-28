@@ -1,8 +1,16 @@
 "use server";
 
+import { consumeRateLimit } from "@dailydigest/db";
 import { askSchema, buildAskPrompt, callLlm, embedTexts } from "@dailydigest/llm";
 import { loadWebConfig } from "@/lib/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+// A leaked link, a buggy client-side loop, or a stray script could otherwise
+// run up real Anthropic/OpenAI cost with no backstop - askArchiveAction
+// calls an LLM per request so gets the tighter limit; searchArchiveAction
+// only embeds the query.
+const SEARCH_RATE_LIMIT = { max: 30, windowSeconds: 60 };
+const ASK_RATE_LIMIT = { max: 15, windowSeconds: 60 };
 
 export interface SearchResultItem {
   id: string;
@@ -21,6 +29,9 @@ export async function searchArchiveAction(query: string): Promise<{ results?: Se
   const supabase = await createServerSupabaseClient();
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return { error: "Oturum bulunamadı." };
+
+  const rateLimit = await consumeRateLimit(supabase, userData.user.id, "archive_search", SEARCH_RATE_LIMIT.max, SEARCH_RATE_LIMIT.windowSeconds);
+  if (!rateLimit.allowed) return { error: "Too many searches - wait a minute and try again." };
 
   const { models } = await loadWebConfig();
 
@@ -62,6 +73,9 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
   const supabase = await createServerSupabaseClient();
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return { error: "Oturum bulunamadı." };
+
+  const rateLimit = await consumeRateLimit(supabase, userData.user.id, "ask_archive", ASK_RATE_LIMIT.max, ASK_RATE_LIMIT.windowSeconds);
+  if (!rateLimit.allowed) return { error: "Too many questions - wait a minute and try again." };
 
   const { models } = await loadWebConfig();
 
