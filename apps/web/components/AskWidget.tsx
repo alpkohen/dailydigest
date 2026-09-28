@@ -49,6 +49,7 @@ export class AskErrorBoundary extends Component<AskErrorBoundaryProps, AskErrorB
  */
 export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [question, setQuestion] = useState("");
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [pending, startTransition] = useTransition();
 
@@ -57,7 +58,7 @@ export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void
   const submit = () => {
     const q = question.trim();
     if (!q || pending) return;
-    setQuestion("");
+    setPendingQuestion(q);
     startTransition(async () => {
       try {
         const result = await askArchiveAction(q);
@@ -66,14 +67,16 @@ export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void
         // A failed server action should stay inside the Ask panel instead of
         // taking down the whole Next.js application shell.
         setExchanges((prev) => [...prev, { question: q, error: "The archive could not answer right now. Please try again in a moment." }]);
+      } finally {
+        setPendingQuestion(null);
       }
     });
   };
 
   return (
-    <div className="ask-widget-panel" role="dialog" aria-label="Ask the archive">
+    <div className="ask-widget-panel" role="dialog" aria-label="Brief AI">
       <div className="ask-widget-header">
-        <span>Ask the archive</span>
+        <span>Brief AI</span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <AiTag />
           <button type="button" className="ask-widget-close" onClick={onClose} aria-label="Close">
@@ -110,7 +113,12 @@ export function AskPanel({ open, onClose }: { open: boolean; onClose: () => void
             )}
           </div>
         ))}
-        {pending && <p className="row-meta">Thinking…</p>}
+        {pending && pendingQuestion && (
+          <div className="ask-widget-exchange ask-widget-pending">
+            <p className="ask-widget-question">{pendingQuestion}</p>
+            <p className="row-meta">Thinking…</p>
+          </div>
+        )}
       </div>
 
       <form

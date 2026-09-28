@@ -11,6 +11,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 // only embeds the query.
 const SEARCH_RATE_LIMIT = { max: 30, windowSeconds: 60 };
 const ASK_RATE_LIMIT = { max: 15, windowSeconds: 60 };
+// A nearest-neighbour result is still noise when a question has no meaningful
+// match in the archive. Keep low-confidence items away from the answer model.
+const ASK_RELEVANCE_THRESHOLD = 0.35;
 
 export interface SearchResultItem {
   id: string;
@@ -121,14 +124,20 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
       score: c.score,
     }));
 
-    // Always reach the LLM, even when archive search returns no items. The
-    // prompt also handles questions about World Brief itself.
+    const relevant = indexed.filter((item) => item.score >= ASK_RELEVANCE_THRESHOLD);
+    if (relevant.length === 0) {
+      return {
+        answer: "Arşivimde bu soruya cevap verecek yeterli bilgi bulamadım. Soruyu biraz daha netleştirerek tekrar deneyebilirsin.",
+        citations: [],
+      };
+    }
+
     const result = await callLlm({
       role: "strong",
       promptName: "ask",
       prompt: buildAskPrompt({
         question,
-        items: indexed.map((c) => ({
+        items: relevant.map((c) => ({
           index: c.index,
           title: c.title,
           standfirst: c.standfirst,
@@ -145,7 +154,7 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
     });
 
     const citedIndices = new Set(result.citation_indices);
-    const citations = indexed.filter((c) => citedIndices.has(c.index));
+    const citations = relevant.filter((c) => citedIndices.has(c.index));
 
     const { data: thread } = await supabase.from("ask_threads").insert({ owner_id: userData.user.id, scope: "archive" }).select("id").single();
     if (thread) {
