@@ -135,11 +135,16 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
 
       <button
         type="button"
-        className={`sidebar-link sidebar-ask-link${askOpen ? " active" : ""}`}
+        className={`sidebar-ask-link${askOpen ? " active" : ""}`}
         onClick={() => setAskOpen((v) => !v)}
+        aria-expanded={askOpen}
       >
-        <IconSpark className="icon" />
-        Ask
+        <span className="sidebar-ask-icon"><IconSpark /></span>
+        <span className="sidebar-ask-copy">
+          <span className="sidebar-ask-title">Ask the archive</span>
+          <span className="sidebar-ask-description">Find context in your coverage</span>
+        </span>
+        <span className="sidebar-ask-arrow" aria-hidden="true">↗</span>
       </button>
 
       <AskPanel open={askOpen} onClose={() => setAskOpen(false)} />

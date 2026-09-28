@@ -251,8 +251,65 @@ button.sidebar-link {
 
 .sidebar-ask-link {
   margin-top: auto;
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(79, 156, 134, 0.13), rgba(29, 34, 44, 0.72));
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-ask-link:hover,
+.sidebar-ask-link.active {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(79, 156, 134, 0.22), rgba(29, 34, 44, 0.9));
+  color: var(--text);
+}
+
+.sidebar-ask-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.sidebar-ask-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-ask-title {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-ask-description {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-ask-arrow {
+  color: var(--accent);
+  font-size: 16px;
+  line-height: 1;
 }
 
 .sidebar-top-row {
