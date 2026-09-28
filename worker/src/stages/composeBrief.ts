@@ -87,7 +87,43 @@ interface ResearchRow {
   id: string;
   item_id: string;
   argument: string | null;
-  items: { title: string } | null;
+  items: { title: string; url: string } | null;
+}
+
+/**
+ * A story clusters several source items; the brief links through to one of
+ * them (CLAUDE.md rule 6: emails show our own summary plus a link to the
+ * original). Picks the earliest-published item as the closest thing to the
+ * original report, falling back to whichever item has no published_at.
+ */
+async function fetchStoryUrls(
+  db: ReturnType<typeof createServiceRoleClient>,
+  storyIds: string[],
+): Promise<Map<string, string>> {
+  if (storyIds.length === 0) return new Map();
+  const { data: rows } = await db
+    .from("story_items")
+    .select("story_id, items(url, published_at)")
+    .in("story_id", storyIds);
+
+  const byStory = new Map<string, { url: string; publishedAt: string | null }[]>();
+  for (const r of (rows ?? []) as unknown as { story_id: string; items: { url: string; published_at: string | null } | null }[]) {
+    if (!r.items) continue;
+    const list = byStory.get(r.story_id) ?? [];
+    list.push({ url: r.items.url, publishedAt: r.items.published_at });
+    byStory.set(r.story_id, list);
+  }
+
+  const result = new Map<string, string>();
+  for (const [storyId, items] of byStory) {
+    const earliest = items.reduce((best, cur) => {
+      if (!best.publishedAt) return best;
+      if (!cur.publishedAt) return best;
+      return cur.publishedAt < best.publishedAt ? cur : best;
+    }, items[0]!);
+    result.set(storyId, earliest.url);
+  }
+  return result;
 }
 
 /**
@@ -154,7 +190,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const { data: researchRows, error: researchError } = await db
     .from("research_items")
-    .select("id, item_id, argument, items(title)")
+    .select("id, item_id, argument, items(title, url)")
     .eq("owner_id", env.OWNER_ID)
     .not("argument", "is", null);
   if (researchError) throw new Error(`Failed to load research_items: ${researchError.message}`);
@@ -214,6 +250,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
 
   const storyById = new Map(stories.map((s) => [s.id, s]));
   const researchById = new Map(researchItems.map((r) => [r.id, r]));
+  const storyUrlById = await fetchStoryUrls(db, stories.map((s) => s.id));
   const outsideRadar = await pickOutsideRadar(env, models, db, run.id, usedOutsideRadarIds);
   const watchlist = await fetchWatchlistItems(env, db, usedWatchlistIds);
 
@@ -228,8 +265,14 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
               title: researchById.get(id)?.items?.title,
               argument: researchById.get(id)?.argument,
               itemId: researchById.get(id)?.item_id,
+              url: researchById.get(id)?.items?.url,
             }))
-          : section.story_ids.map((id) => ({ id, title: storyById.get(id)?.title, summary: storyById.get(id)?.summary })),
+          : section.story_ids.map((id) => ({
+              id,
+              title: storyById.get(id)?.title,
+              summary: storyById.get(id)?.summary,
+              url: storyUrlById.get(id),
+            })),
     })),
     outsideRadar,
     watchlist,
