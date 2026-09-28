@@ -2,6 +2,7 @@
 
 import { buildTopicDraftPrompt, callLlm, embedTexts, topicDraftSchema } from "@dailydigest/llm";
 import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@/lib/actionResult";
 import { loadWebConfig } from "@/lib/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -69,15 +70,19 @@ export async function createTopicAction(formData: FormData): Promise<{ error?: s
   return {};
 }
 
-export async function setTopicActiveAction(topicId: string, active: boolean): Promise<void> {
+export async function setTopicActiveAction(topicId: string, active: boolean): Promise<ActionResult> {
   const supabase = await createServerSupabaseClient();
-  await supabase.from("topics").update({ active }).eq("id", topicId);
+  const { error } = await supabase.from("topics").update({ active }).eq("id", topicId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/topics");
+  return { ok: true };
 }
 
-export async function deleteTopicAction(topicId: string): Promise<void> {
+export async function deleteTopicAction(topicId: string): Promise<ActionResult> {
   // SPEC.md section 4.1: "Delete archives the topic; items stay in the archive."
   const supabase = await createServerSupabaseClient();
-  await supabase.from("topics").update({ active: false }).eq("id", topicId);
+  const { error } = await supabase.from("topics").update({ active: false }).eq("id", topicId);
+  if (error) return { ok: false, error: error.message };
   revalidatePath("/topics");
+  return { ok: true };
 }

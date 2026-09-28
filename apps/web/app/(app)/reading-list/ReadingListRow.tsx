@@ -22,6 +22,7 @@ export function ReadingListRow({
   const [editing, setEditing] = useState(false);
   const [notesValue, setNotesValue] = useState(notes);
   const [tagsValue, setTagsValue] = useState(tags.join(", "));
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="row-flex" style={{ display: "block" }}>
@@ -37,17 +38,38 @@ export function ReadingListRow({
           {title}
         </a>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => toggleReadAction(id, !isRead))}>
+          <button
+            className="btn btn-sm"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                setError(null);
+                const result = await toggleReadAction(id, !isRead);
+                if (!result.ok) setError(result.error ?? "Could not update.");
+              })
+            }
+          >
             {isRead ? "Mark unread" : "Read"}
           </button>
           <button className="btn btn-sm" disabled={pending} onClick={() => setEditing((v) => !v)}>
             Notes/tags
           </button>
-          <button className="btn btn-sm" disabled={pending} onClick={() => startTransition(() => removeFromReadingListAction(id))}>
+          <button
+            className="btn btn-sm"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                setError(null);
+                const result = await removeFromReadingListAction(id);
+                if (!result.ok) setError(result.error ?? "Could not remove.");
+              })
+            }
+          >
             Remove
           </button>
         </div>
       </div>
+      {error && <div className="text-danger" style={{ fontSize: 12, marginTop: 4 }}>{error}</div>}
       {tags.length > 0 && <div className="row-meta">{tags.join(", ")}</div>}
       {notes && !editing && <div className="row-summary">{notes}</div>}
       {editing && (
@@ -60,8 +82,13 @@ export function ReadingListRow({
             style={{ alignSelf: "start" }}
             onClick={() =>
               startTransition(async () => {
-                await updateNotesAction(id, notesValue, tagsValue);
-                setEditing(false);
+                setError(null);
+                // Only close the editor on success - a code review found
+                // this closing unconditionally, silently discarding the
+                // edit (with no error shown) if the update had failed.
+                const result = await updateNotesAction(id, notesValue, tagsValue);
+                if (result.ok) setEditing(false);
+                else setError(result.error ?? "Could not save.");
               })
             }
           >

@@ -79,6 +79,7 @@ function sourceMeta(sourceCount?: number, perspectiveCount?: number) {
 
 function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initiallySaved: boolean }) {
   const [saved, setSaved] = useState(initiallySaved);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   if (saved) {
@@ -91,15 +92,34 @@ function SaveStoryButton({ storyId, initiallySaved }: { storyId: string; initial
   }
 
   return (
-    <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveStoryToReadingListAction(storyId); setSaved(true); })}>
-      <IconBookmark />
-      Save
-    </button>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <button
+        className="save-btn"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            // Only flip to "Saved" once the write actually succeeds - a
+            // full-system code review found this setting local state
+            // unconditionally, showing "Saved" even when the underlying
+            // insert/upsert had failed.
+            const result = await saveStoryToReadingListAction(storyId);
+            if (result.ok) setSaved(true);
+            else setError(result.error ?? "Could not save.");
+          })
+        }
+      >
+        <IconBookmark />
+        Save
+      </button>
+      {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
+    </span>
   );
 }
 
 function SaveItemButton({ itemId, initiallySaved }: { itemId: string; initiallySaved: boolean }) {
   const [saved, setSaved] = useState(initiallySaved);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   if (saved) {
@@ -112,10 +132,24 @@ function SaveItemButton({ itemId, initiallySaved }: { itemId: string; initiallyS
   }
 
   return (
-    <button className="save-btn" disabled={pending} onClick={() => startTransition(async () => { await saveItemToReadingListAction(itemId); setSaved(true); })}>
-      <IconBookmark />
-      Save
-    </button>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <button
+        className="save-btn"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            setError(null);
+            const result = await saveItemToReadingListAction(itemId);
+            if (result.ok) setSaved(true);
+            else setError(result.error ?? "Could not save.");
+          })
+        }
+      >
+        <IconBookmark />
+        Save
+      </button>
+      {error && <span className="text-danger" style={{ fontSize: 12 }}>{error}</span>}
+    </span>
   );
 }
 
