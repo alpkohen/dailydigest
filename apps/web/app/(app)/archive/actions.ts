@@ -125,12 +125,6 @@ export async function askArchiveAction(question: string): Promise<{ answer?: str
     }));
 
     const relevant = indexed.filter((item) => item.score >= ASK_RELEVANCE_THRESHOLD);
-    if (relevant.length === 0) {
-      return {
-        answer: "Arşivimde bu soruya cevap verecek yeterli bilgi bulamadım. Soruyu biraz daha netleştirerek tekrar deneyebilirsin.",
-        citations: [],
-      };
-    }
 
     const result = await callLlm({
       role: "strong",
