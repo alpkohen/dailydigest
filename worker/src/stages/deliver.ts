@@ -73,7 +73,10 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
 
   const resend = new Resend(env.RESEND_API_KEY);
   const result = await resend.emails.send({
-    from: env.RESEND_FROM_EMAIL ?? "World Brief <onboarding@resend.dev>",
+    // GitHub Actions injects an unset secret as an empty string, not
+    // undefined, so `?? default` silently passed "" as the from address
+    // (Resend's actual error: "The domain is invalid"). `||` catches both.
+    from: env.RESEND_FROM_EMAIL || "World Brief <onboarding@resend.dev>",
     to: env.BRIEF_RECIPIENT_EMAIL,
     subject: subjectFor(content, date),
     html,
