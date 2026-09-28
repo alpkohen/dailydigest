@@ -11,10 +11,19 @@ function poolForHour(hour: number): string[] {
   return NIGHT;
 }
 
+// A fixed 🌸 on every greeting got old fast - this pool picks a different,
+// lighthearted one each time instead, independent of which phrase gets
+// picked.
+const EMOJIS = ["😊", "✨", "☕", "🎉", "😄", "🙌", "🌟", "😉", "🫶", "🎈", "🚀", "🤓"];
+
+function pickEmoji(): string {
+  return EMOJIS[Math.floor(Math.random() * EMOJIS.length)]!;
+}
+
 export function pickGreeting(name: string): string {
   const pool = poolForHour(new Date().getHours());
   const phrase = pool[Math.floor(Math.random() * pool.length)];
-  return `${phrase}, ${name} 🌸.`;
+  return `${phrase}, ${name} ${pickEmoji()}.`;
 }
 
 // Archived briefs aren't "today", so a time-of-day phrase ("Good morning")
@@ -25,5 +34,5 @@ const ARCHIVE = ["Welcome back", "Good to see you", "Stepping into the archive",
 
 export function pickArchiveGreeting(name: string): string {
   const phrase = ARCHIVE[Math.floor(Math.random() * ARCHIVE.length)];
-  return `${phrase}, ${name} 🌸.`;
+  return `${phrase}, ${name} ${pickEmoji()}.`;
 }

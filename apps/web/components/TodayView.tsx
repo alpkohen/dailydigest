@@ -200,7 +200,7 @@ export function TodayView({
   // render and the client's first render or React logs a hydration
   // mismatch (and briefly flashes the wrong text). Render a fixed greeting
   // on both, then swap in the random pick only after mount.
-  const [greeting, setGreeting] = useState(`Hello, ${OWNER_FIRST_NAME} 🌸.`);
+  const [greeting, setGreeting] = useState(`Hello, ${OWNER_FIRST_NAME} 😊.`);
   useEffect(() => {
     setGreeting(isToday ? pickGreeting(OWNER_FIRST_NAME) : pickArchiveGreeting(OWNER_FIRST_NAME));
   }, [isToday]);
