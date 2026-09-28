@@ -40,6 +40,14 @@ function parseRecipients(raw: string): string[] {
     .filter((s) => EMAIL_PATTERN.test(s));
 }
 
+// Postgres text/json rejects \u0000 and unpaired surrogates ("unsupported
+// Unicode escape sequence"). Source article text occasionally carries these
+// through extraction, and it only surfaces when the rendered HTML reaches
+// the DB - strip them here rather than at every upstream text source.
+function sanitizeForPostgres(value: string): string {
+  return value.replace(/\u0000/g, "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+}
+
 function subjectFor(content: BriefContent, dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
@@ -72,7 +80,9 @@ export async function runDeliverStage(env: Env, date: string): Promise<void> {
 
   const content = withFeedbackLinks(brief.content as BriefContent, env);
   const dateLabel = formatDateLabel(date);
-  const { html, text } = await renderDailyBrief(content, dateLabel);
+  const rendered = await renderDailyBrief(content, dateLabel);
+  const html = sanitizeForPostgres(rendered.html);
+  const text = sanitizeForPostgres(rendered.text);
 
   const recipients = env.BRIEF_RECIPIENT_EMAIL ? parseRecipients(env.BRIEF_RECIPIENT_EMAIL) : [];
   if (!env.RESEND_API_KEY || recipients.length === 0) {
