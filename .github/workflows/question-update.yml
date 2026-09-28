@@ -1,0 +1,46 @@
+name: weekly question updates
+
+on:
+  schedule:
+    # Every Sunday at 08:00 Europe/Istanbul (UTC+3, no DST).
+    - cron: "0 5 * * 0"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "YYYY-MM-DD (defaults to today)"
+        required: false
+
+concurrency:
+  group: dailydigest-worker
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Write weekly question updates
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+          WORKER_BACKGROUND_PAUSED: ${{ vars.WORKER_BACKGROUND_PAUSED }}
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            pnpm worker:run --stage=question_update --date="${{ github.event.inputs.date }}"
+          else
+            pnpm worker:run --stage=question_update
+          fi

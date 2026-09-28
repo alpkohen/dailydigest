@@ -359,6 +359,29 @@ button.sidebar-link {
   font-size: 13px;
 }
 
+.text-warning {
+  color: var(--amber);
+}
+
+.question-citations {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.question-citations a {
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.question-citations a:hover {
+  text-decoration: underline;
+}
+
 /* Panels & cards */
 
 .panel {

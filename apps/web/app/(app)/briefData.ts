@@ -113,6 +113,7 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
       .from("question_evidence")
       .select("note, stories(id, title)")
       .eq("question_id", q.id)
+      .eq("relevant", true)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

@@ -21,6 +21,10 @@ on:
         required: false
         default: "false"
 
+concurrency:
+  group: dailydigest-worker
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest

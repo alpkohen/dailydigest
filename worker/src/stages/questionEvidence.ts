@@ -7,9 +7,8 @@ const CONCURRENCY = 8;
 
 /**
  * SPEC.md section 4.2 / section 6: each run, stories are tested for
- * relevance to each active question. Only stories not yet checked against
- * a given question are scored (question_evidence has a unique
- * (question_id, story_id) constraint), so this stays cheap on repeat runs.
+ * relevance to each active question. Every verdict is stored, including
+ * irrelevant pairs, so a question/story pair is scored only once.
  */
 export async function runQuestionEvidenceStage(env: Env, models: ModelsConfig, date: string): Promise<void> {
   const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -32,7 +31,7 @@ export async function runQuestionEvidenceStage(env: Env, models: ModelsConfig, d
     console.log("question_evidence stage: no active questions yet");
     await db
       .from("pipeline_runs")
-      .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "question_evidence", date, logged: 0 } })
+      .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "question_evidence", date, checked: 0, logged: 0, failed: 0 } })
       .eq("id", run.id);
     return;
   }
@@ -47,7 +46,9 @@ export async function runQuestionEvidenceStage(env: Env, models: ModelsConfig, d
 
   const pairs = (questions).flatMap((q) => (stories ?? []).map((s) => ({ question: q, story: s })));
 
+  let checked = 0;
   let logged = 0;
+  let failed = 0;
   await runPool(pairs, CONCURRENCY, async ({ question, story }) => {
     const { data: existing } = await db
       .from("question_evidence")
@@ -72,25 +73,28 @@ export async function runQuestionEvidenceStage(env: Env, models: ModelsConfig, d
         maxTokens: 256,
       });
 
-      if (result.relevant) {
-        await db.from("question_evidence").insert({
-          owner_id: env.OWNER_ID,
-          question_id: question.id,
-          story_id: story.id,
-          stance: result.stance,
-          note: result.note,
-        });
-        logged++;
-      }
+      const { error: insertError } = await db.from("question_evidence").insert({
+        owner_id: env.OWNER_ID,
+        question_id: question.id,
+        story_id: story.id,
+        relevant: result.relevant,
+        stance: result.relevant ? result.stance : null,
+        note: result.relevant ? result.note : null,
+      });
+      if (insertError) throw new Error(insertError.message);
+
+      checked++;
+      if (result.relevant) logged++;
     } catch (err) {
+      failed++;
       console.error(`question_evidence: failed for question ${question.id}, story ${story.id}: ${(err as Error).message}`);
     }
   });
 
   await db
     .from("pipeline_runs")
-    .update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "question_evidence", date, logged } })
+    .update({ finished_at: new Date().toISOString(), status: failed > 0 ? "partial" : "ok", stats: { stage: "question_evidence", date, checked, logged, failed } })
     .eq("id", run.id);
 
-  console.log(`question_evidence stage done: ${logged} evidence rows logged`);
+  console.log(`question_evidence stage done: ${checked} pairs checked, ${logged} relevant, ${failed} failed`);
 }

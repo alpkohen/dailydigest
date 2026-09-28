@@ -41,7 +41,7 @@ const STAGES: Record<string, Stage> = {
   compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, date),
   deliver: (env, _config, date) => runDeliverStage(env, date),
   learn: (env, _config, date) => runLearnStage(env, date),
-  // Weekly, not part of --all (SPEC.md section 4.2; wired to a cron in M9).
+  // Weekly, not part of --all (SPEC.md section 4.2; run by its own workflow).
   question_update: (env, config, date) => runQuestionUpdateStage(env, config.models, date),
   create_topic: (env, config, _date, args) => {
     const sentence = args.get("topic");
