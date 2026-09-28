@@ -24,6 +24,10 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Safety net alongside the new fetch timeout in packages/db/src/client.ts:
+    # GitHub's own default (360 minutes) let a hung run sit all morning with
+    # no email ever sent. A full --all run normally finishes well under this.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
