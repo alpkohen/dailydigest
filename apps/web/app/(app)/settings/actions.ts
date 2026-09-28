@@ -10,7 +10,6 @@ export async function saveSettingsAction(formData: FormData): Promise<{ error?: 
 
   const language = String(formData.get("language") ?? "tr");
   const timezone = String(formData.get("timezone") ?? "Europe/Istanbul");
-  const briefTime = String(formData.get("brief_time") ?? "07:00");
   const quietStart = String(formData.get("quiet_start") ?? "23:00");
   const quietEnd = String(formData.get("quiet_end") ?? "07:00");
   const dailyBudget = Number(formData.get("daily_budget_usd") ?? 5);
@@ -21,7 +20,6 @@ export async function saveSettingsAction(formData: FormData): Promise<{ error?: 
       owner_id: userData.user.id,
       language,
       timezone,
-      brief_time: briefTime,
       quiet_hours: { start: quietStart, end: quietEnd },
       daily_budget_usd: dailyBudget,
       interest_profile: interestProfile,

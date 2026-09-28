@@ -6,7 +6,6 @@ import { saveSettingsAction } from "./actions";
 export function SettingsForm({
   language,
   timezone,
-  briefTime,
   quietStart,
   quietEnd,
   dailyBudgetUsd,
@@ -14,7 +13,6 @@ export function SettingsForm({
 }: {
   language: string;
   timezone: string;
-  briefTime: string;
   quietStart: string;
   quietEnd: string;
   dailyBudgetUsd: number;
@@ -48,10 +46,12 @@ export function SettingsForm({
         <span className="field-label">Timezone</span>
         <input name="timezone" defaultValue={timezone} className="input" />
       </label>
-      <label className="field">
+      <div className="field">
         <span className="field-label">Brief delivery time</span>
-        <input name="brief_time" type="time" defaultValue={briefTime} className="input" />
-      </label>
+        <div className="input" style={{ display: "flex", alignItems: "center", color: "var(--text-dim)" }}>
+          05:30 (Europe/Istanbul) &middot; fixed
+        </div>
+      </div>
       <label className="field">
         <span className="field-label">Quiet hours start</span>
         <input name="quiet_start" type="time" defaultValue={quietStart} className="input" />

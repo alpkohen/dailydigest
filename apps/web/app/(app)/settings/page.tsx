@@ -10,7 +10,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("language, timezone, brief_time, quiet_hours, daily_budget_usd, interest_profile")
+    .select("language, timezone, quiet_hours, daily_budget_usd, interest_profile")
     .eq("owner_id", userData.user?.id ?? "")
     .maybeSingle();
 
@@ -24,7 +24,6 @@ export default async function SettingsPage() {
         <SettingsForm
           language={profile?.language ?? "tr"}
           timezone={profile?.timezone ?? "Europe/Istanbul"}
-          briefTime={profile?.brief_time?.slice(0, 5) ?? "07:00"}
           quietStart={quietHours.start}
           quietEnd={quietHours.end}
           dailyBudgetUsd={profile?.daily_budget_usd ?? limits.daily_budget_usd}
