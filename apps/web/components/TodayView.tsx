@@ -187,7 +187,6 @@ export function TodayView({
   savedItemIds: string[];
 }) {
   const [tab, setTab] = useState<TabKey>("all");
-  const [topicFilter, setTopicFilter] = useState<string>("all");
   // A time-of-day greeting ("Good evening") only makes sense for the brief
   // being read as it lands. A full-system audit found it showing up on past
   // briefs too (e.g. "Rise and shine" at 9pm while reading last week's
@@ -206,21 +205,18 @@ export function TodayView({
     setGreeting(isToday ? pickGreeting(OWNER_FIRST_NAME) : pickArchiveGreeting(OWNER_FIRST_NAME));
   }, [isToday]);
 
-  const allTopics = useMemo(() => Array.from(new Set(stories.flatMap((s) => s.topics))).sort(), [stories]);
   const savedStorySet = useMemo(() => new Set(savedStoryIds), [savedStoryIds]);
   const savedItemSet = useMemo(() => new Set(savedItemIds), [savedItemIds]);
-
-  const topicFiltered = stories.filter((s) => topicFilter === "all" || s.topics.includes(topicFilter));
 
   const tierOrder: Record<string, number> = { critical: 0, follow_up: 1, worth_reading: 2 };
   const storiesForTab =
     tab === "critical"
-      ? topicFiltered.filter((s) => s.section === "critical")
+      ? stories.filter((s) => s.section === "critical")
       : tab === "follow_up"
-        ? topicFiltered.filter((s) => s.section === "follow_up")
+        ? stories.filter((s) => s.section === "follow_up")
         : tab === "research"
           ? []
-          : [...topicFiltered].sort((a, b) => (tierOrder[a.section] ?? 9) - (tierOrder[b.section] ?? 9));
+          : [...stories].sort((a, b) => (tierOrder[a.section] ?? 9) - (tierOrder[b.section] ?? 9));
 
   const researchForTab = tab === "critical" || tab === "follow_up" ? [] : research;
 
@@ -253,28 +249,16 @@ export function TodayView({
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 20 }}>
-            <div className="tab-nav" style={{ marginTop: 0 }}>
-              {TABS.map((t) => (
-                <button
-                  key={t.key}
-                  className={`tab-item${tab === t.key ? ` active${t.className ? ` ${t.className}` : ""}` : ""}`}
-                  onClick={() => setTab(t.key)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            {allTopics.length > 0 && (
-              <select className="select" style={{ width: "auto", fontSize: 12 }} value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-                <option value="all">All topics</option>
-                {allTopics.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            )}
+          <div className="tab-nav" style={{ marginTop: 20 }}>
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                className={`tab-item${tab === t.key ? ` active${t.className ? ` ${t.className}` : ""}` : ""}`}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           <hr className="hr" />
