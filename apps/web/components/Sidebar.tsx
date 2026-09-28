@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OWNER_DISPLAY_NAME, OWNER_INITIALS } from "@/lib/ownerProfile";
-import { IconArchive, IconBookmark, IconClose, IconMenu, IconToday } from "./icons";
+import { IconArchive, IconBookmark, IconChevronDown, IconClose, IconMenu, IconToday } from "./icons";
 
 const PRIMARY_LINKS = [
   { href: "/", label: "Today", icon: IconToday },
@@ -41,6 +41,32 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
     setMenuOpen(false);
   }, [pathname]);
 
+  // Collapsed state is a per-viewer UI preference, not data other people or
+  // future sessions need to see, so it lives in localStorage rather than
+  // the DB. Default to expanded on both server and client renders (a
+  // localStorage read can't happen during SSR) and only flip after mount,
+  // matching the pattern already used for the greeting to avoid a
+  // hydration mismatch.
+  const [topicsCollapsed, setTopicsCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setTopicsCollapsed(localStorage.getItem("sidebar-topics-collapsed") === "true");
+    } catch {
+      // Private browsing / blocked storage: keep the default (expanded).
+    }
+  }, []);
+  const toggleTopicsCollapsed = () => {
+    setTopicsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebar-topics-collapsed", String(next));
+      } catch {
+        // Ignore - nothing to persist to if storage is unavailable.
+      }
+      return next;
+    });
+  };
+
   return (
     <aside className={`sidebar${menuOpen ? " menu-open" : ""}`}>
       <div className="sidebar-top-row">
@@ -69,20 +95,30 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
 
       {visibleTopics.length > 0 && (
         <>
-          <p className="sidebar-eyebrow">Topics you follow</p>
-          <div className="sidebar-topics">
-            {visibleTopics.map((t) => (
-              <Link key={t.id} href={`/topics/${t.id}`} className="sidebar-topic-link">
-                <span className="sidebar-topic-dot" />
-                {t.name}
-              </Link>
-            ))}
-            {hiddenCount > 0 && (
-              <Link href="/topics" className="sidebar-topic-link" style={{ color: "var(--text-faint)" }}>
-                +{hiddenCount} more · See all
-              </Link>
-            )}
-          </div>
+          <button
+            type="button"
+            className="sidebar-eyebrow sidebar-eyebrow-toggle"
+            onClick={toggleTopicsCollapsed}
+            aria-expanded={!topicsCollapsed}
+          >
+            Topics you follow
+            <IconChevronDown className={`sidebar-eyebrow-chevron${topicsCollapsed ? " collapsed" : ""}`} />
+          </button>
+          {!topicsCollapsed && (
+            <div className="sidebar-topics">
+              {visibleTopics.map((t) => (
+                <Link key={t.id} href={`/topics/${t.id}`} className="sidebar-topic-link">
+                  <span className="sidebar-topic-dot" />
+                  {t.name}
+                </Link>
+              ))}
+              {hiddenCount > 0 && (
+                <Link href="/topics" className="sidebar-topic-link" style={{ color: "var(--text-faint)" }}>
+                  +{hiddenCount} more · See all
+                </Link>
+              )}
+            </div>
+          )}
         </>
       )}
 
