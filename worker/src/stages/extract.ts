@@ -149,7 +149,12 @@ export async function runExtractStage(env: Env, date: string): Promise<void> {
         // one at a time made a 1000+ item day take well over an hour.
         // Small fixed concurrency keeps memory/CPU (JSDOM per item) bounded
         // while cutting wall time roughly proportionally.
-        const ITEM_CONCURRENCY = 5;
+        // Sources produce 1500-3000 new items on a typical day (confirmed
+        // live: 4 consecutive days all in that range, not a one-off spike).
+        // These are I/O-bound network fetches, not CPU-bound, so a much
+        // higher concurrency than the CLAIM_BATCH_SIZE/ITEMS_PER_JOB knobs
+        // suggest is safe and needed to clear that volume in reasonable time.
+        const ITEM_CONCURRENCY = 25;
         const itemsToProcess = (items ?? []) as ItemRow[];
         for (let i = 0; i < itemsToProcess.length; i += ITEM_CONCURRENCY) {
           await Promise.all(itemsToProcess.slice(i, i + ITEM_CONCURRENCY).map((item) => extractOne(db, item)));
