@@ -200,7 +200,13 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, date:
     ownerId: env.OWNER_ID,
     runId: run.id,
     stage: "compose_brief",
-    maxTokens: 4096,
+    // The prompt requires every candidate story id to be assigned to a
+    // section, so output size scales with the candidate count. 4096 was
+    // enough on a normal day but truncated the JSON entirely once a
+    // multi-day backlog pushed the candidate count into the high hundreds
+    // (each story id costs ~15-20 output tokens once JSON overhead is
+    // included).
+    maxTokens: 16384,
   });
 
   const validation = validateBrief({
