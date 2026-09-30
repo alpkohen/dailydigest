@@ -14,6 +14,14 @@ const FETCH_TIMEOUT_MS = 15_000;
 // parsing failure on non-article content, so it's dropped rather than
 // stored (defense in depth alongside the content-type check above).
 const MAX_TEXT_LENGTH = 100_000;
+// JSDOM/Readability parse synchronously with no timeout of their own -
+// a single pathological or oversized document can block the event loop
+// for a very long time with nothing else able to run meanwhile (observed
+// live: a whole extract run stalled indefinitely on one such item, with
+// zero items processed for 15+ minutes). Reject oversized HTML before it
+// ever reaches JSDOM rather than relying on the post-parse text length
+// check, which only applies once the (possibly very slow) parse is done.
+const MAX_HTML_LENGTH = 2_000_000;
 
 interface ItemRow {
   id: string;
@@ -59,6 +67,7 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
   let text: string | null = null;
   try {
     const html = await fetchHtml(item.url);
+    if (html.length > MAX_HTML_LENGTH) throw new Error(`html too large (${html.length} bytes), skipping parse`);
     const dom = new JSDOM(html, { url: item.url });
     const article = new Readability(dom.window.document).parse();
     const extracted = article?.textContent?.trim() || null;
@@ -136,8 +145,14 @@ export async function runExtractStage(env: Env, date: string): Promise<void> {
           .in("id", itemIds);
         if (error) throw new Error(error.message);
 
-        for (const item of (items ?? []) as ItemRow[]) {
-          await extractOne(db, item);
+        // Each item is an independent network fetch + parse; running them
+        // one at a time made a 1000+ item day take well over an hour.
+        // Small fixed concurrency keeps memory/CPU (JSDOM per item) bounded
+        // while cutting wall time roughly proportionally.
+        const ITEM_CONCURRENCY = 5;
+        const itemsToProcess = (items ?? []) as ItemRow[];
+        for (let i = 0; i < itemsToProcess.length; i += ITEM_CONCURRENCY) {
+          await Promise.all(itemsToProcess.slice(i, i + ITEM_CONCURRENCY).map((item) => extractOne(db, item)));
         }
 
         await completeJob(db, job.id);
