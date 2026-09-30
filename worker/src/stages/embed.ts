@@ -96,20 +96,25 @@ export async function runEmbedStage(env: Env, models: ModelsConfig, date: string
           stage: "embed",
         });
 
-        // One upsert for the whole batch instead of 50 sequential
-        // single-row updates - each round trip to Supabase adds up fast
-        // under any backend latency, and this batch is already
-        // independent per-row (only touches embedding/embedding_model/
-        // status), so there's nothing to lose by writing it in one call.
-        const { error: upsertError } = await db.from("items").upsert(
-          items.map((item, i) => ({
-            id: item.id,
-            embedding: vectors[i],
-            embedding_model: models.embedding.model,
-            status: "embedded",
-          })),
-        );
-        if (upsertError) throw new Error(upsertError.message);
+        // NOTE: tried batching this into one .upsert() call to cut down
+        // round trips - broke immediately in production. Supabase's upsert
+        // builds a real INSERT ... ON CONFLICT statement, so Postgres
+        // validates every NOT NULL column (canonical_url, url, title, ...)
+        // against the payload before it ever considers the conflict
+        // resolution, even though every one of these rows already exists.
+        // A partial-column payload isn't a safe way to bulk-update this
+        // table without also carrying those columns' current values.
+        // Reverted to sequential per-row updates.
+        for (let i = 0; i < items.length; i++) {
+          await db
+            .from("items")
+            .update({
+              embedding: vectors[i],
+              embedding_model: models.embedding.model,
+              status: "embedded",
+            })
+            .eq("id", items[i]!.id);
+        }
 
         await completeJob(db, job.id);
         processed++;
