@@ -7,6 +7,7 @@ import { IconArrowRight, IconBookmark, IconCheck, IconFrame } from "./icons";
 import { AiTag } from "./AiTag";
 import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
 import { pickArchiveGreeting, pickGreeting } from "@/lib/greetings";
+import { safeUrl } from "@/lib/safeUrl";
 
 export interface TodayStory {
   id: string;
@@ -376,8 +377,8 @@ export function TodayView({
                 </div>
                 <p className="rail-card-title-v2" lang="tr" style={{ marginTop: 8 }}>{outsideRadar.title}</p>
                 <p className="rail-card-desc" lang="tr">{outsideRadar.reason}</p>
-                {outsideRadar.url && (
-                  <a href={outsideRadar.url} target="_blank" rel="noreferrer" className="rail-card-link">
+                {safeUrl(outsideRadar.url) && (
+                  <a href={safeUrl(outsideRadar.url)} target="_blank" rel="noreferrer" className="rail-card-link">
                     View source <IconArrowRight />
                   </a>
                 )}
@@ -388,14 +389,24 @@ export function TodayView({
               <div className="rail-card-v2">
                 <p className="rail-card-eyebrow">From your watchlist</p>
                 <div className="link-list">
-                  {watchlist.map((w) => (
-                    <a key={w.id} href={w.url} target="_blank" rel="noreferrer">
-                      <div className="row-title" style={{ fontSize: 13 }}>
-                        {w.title}
-                      </div>
-                      <div className="row-meta">{w.watchName}</div>
-                    </a>
-                  ))}
+                  {watchlist.map((w) => {
+                    const watchUrl = safeUrl(w.url);
+                    const body = (
+                      <>
+                        <div className="row-title" style={{ fontSize: 13 }}>
+                          {w.title}
+                        </div>
+                        <div className="row-meta">{w.watchName}</div>
+                      </>
+                    );
+                    return watchUrl ? (
+                      <a key={w.id} href={watchUrl} target="_blank" rel="noreferrer">
+                        {body}
+                      </a>
+                    ) : (
+                      <div key={w.id}>{body}</div>
+                    );
+                  })}
                 </div>
               </div>
             )}

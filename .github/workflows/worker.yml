@@ -32,10 +32,13 @@ jobs:
     # GitHub's own default (360 minutes) let a hung run sit all morning with
     # no email ever sent. 45 min turned out too tight for a real --all run:
     # ingest alone (many slow/paywalled sources, no per-item cap) regularly
-    # takes 30-40 min on its own, leaving no room for extract through
-    # deliver and silently cancelling the brief every day. 90 min gives the
-    # full pipeline real headroom while still bounding a genuine hang.
-    timeout-minutes: 90
+    # takes 30-40 min on its own. 90 min then also turned out too tight -
+    # relevance alone (LLM call per item x topic) was observed live taking
+    # 30+ minutes for a small few-hundred-item subset, which scales to well
+    # over an hour on a normal 1500-3000 item day, before cluster/score/
+    # enrich/compose_brief/deliver even run. 180 min gives real headroom for
+    # a genuine full day while still well short of GitHub's own 360 min cap.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 

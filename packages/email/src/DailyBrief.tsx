@@ -47,6 +47,16 @@ const SECTION_META: Record<
   new_research: { title: "New research", color: COLORS.violet },
 };
 
+// item.url/outsideRadar.url/watchlist url all ultimately trace back to
+// items.url, populated from third-party RSS/HTML sources during ingest
+// with no scheme check anywhere upstream - reject anything that isn't a
+// plain http(s) link before it ever reaches an href (code-review finding:
+// a source item with e.g. a javascript: url would otherwise render as-is).
+function safeUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  return /^https?:\/\//i.test(url) ? url : undefined;
+}
+
 // .png, not .webp: Outlook (desktop, Word-based rendering engine) doesn't
 // support WebP at all, and several other mail clients are inconsistent
 // about it - the logo was silently missing from every sent email until
@@ -114,11 +124,13 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                   >
                     {meta.title}
                   </Text>
-                  {section.items.map((item) => (
+                  {section.items.map((item) => {
+                    const itemUrl = safeUrl(item.url);
+                    return (
                     <div key={item.id} style={{ margin: "0 0 16px" }}>
                       <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
-                        {item.url ? (
-                          <a href={item.url} style={{ color: COLORS.text, textDecoration: "none" }}>
+                        {itemUrl ? (
+                          <a href={itemUrl} style={{ color: COLORS.text, textDecoration: "none" }}>
                             {item.title}
                           </a>
                         ) : (
@@ -144,7 +156,8 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                         </Text>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   <Hr style={{ borderColor: COLORS.border, marginTop: 8 }} />
                 </Section>
               );
@@ -167,14 +180,21 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
               >
                 From your watchlist
               </Text>
-              {content.watchlist.map((w) => (
+              {content.watchlist.map((w) => {
+                const watchUrl = safeUrl(w.url);
+                return (
                 <Text key={w.id} style={{ fontSize: 13, margin: "8px 0" }}>
-                  <a href={w.url} style={{ color: COLORS.text, textDecoration: "none" }}>
-                    {w.title}
-                  </a>
+                  {watchUrl ? (
+                    <a href={watchUrl} style={{ color: COLORS.text, textDecoration: "none" }}>
+                      {w.title}
+                    </a>
+                  ) : (
+                    w.title
+                  )}
                   <span style={{ color: COLORS.textFaint, fontSize: 11 }}> — {w.watchName}</span>
                 </Text>
-              ))}
+                );
+              })}
               <Hr style={{ borderColor: COLORS.border, marginTop: 8 }} />
             </Section>
           )}
@@ -197,8 +217,8 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                 Outside your radar
               </Text>
               <Text style={{ fontFamily: "Georgia, serif", fontSize: 16, color: COLORS.text, margin: "0 0 4px", lineHeight: "22px" }}>
-                {content.outsideRadar.url ? (
-                  <a href={content.outsideRadar.url} style={{ color: COLORS.text, textDecoration: "none" }}>
+                {safeUrl(content.outsideRadar.url) ? (
+                  <a href={safeUrl(content.outsideRadar.url)} style={{ color: COLORS.text, textDecoration: "none" }}>
                     {content.outsideRadar.title}
                   </a>
                 ) : (
