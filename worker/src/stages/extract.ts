@@ -6,6 +6,7 @@ import type { Env } from "../env.js";
 import { claimJobs, completeJob, enqueueJobs, failJob, type JobRow } from "../jobs.js";
 import { computeSimhash, textHash, weightedSimhashInput } from "../lib/hash.js";
 import { detectLanguage } from "../lib/language.js";
+import { sanitizeForPostgres } from "../lib/sanitize.js";
 
 const CLAIM_BATCH_SIZE = 5;
 const ITEMS_PER_JOB = 20;
@@ -71,23 +72,41 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
     const dom = new JSDOM(html, { url: item.url });
     const article = new Readability(dom.window.document).parse();
     const extracted = article?.textContent?.trim() || null;
-    text = extracted && extracted.length <= MAX_TEXT_LENGTH ? extracted : null;
+    // Sanitize before the length check too: a source's garbled encoding can
+    // produce \u0000/unpaired surrogates that Postgres rejects outright
+    // (code-review finding: this write was unguarded, and with items now
+    // processed 25-at-a-time via Promise.all, one poisoned item's crash
+    // used to take its whole concurrent batch down with it).
+    const cleaned = extracted ? sanitizeForPostgres(extracted) : null;
+    text = cleaned && cleaned.length <= MAX_TEXT_LENGTH ? cleaned : null;
   } catch (err) {
     console.warn(`extract: could not fetch/parse ${item.url}: ${(err as Error).message}`);
   }
 
   const language = item.language ?? detectLanguage(text ?? item.title);
 
-  await db
-    .from("items")
-    .update({
-      text,
-      language,
-      text_hash: text ? textHash(text) : null,
-      simhash: text ? computeSimhash(weightedSimhashInput(item.title, text)) : null,
-      status: "extracted",
-    })
-    .eq("id", item.id);
+  try {
+    await db
+      .from("items")
+      .update({
+        text,
+        language,
+        text_hash: text ? textHash(text) : null,
+        simhash: text ? computeSimhash(weightedSimhashInput(item.title, text)) : null,
+        status: "extracted",
+      })
+      .eq("id", item.id);
+  } catch (err) {
+    // Sanitizing text should prevent this, but the write itself is still
+    // unguarded against any other per-item failure - and since this runs
+    // inside a Promise.all with 24 siblings, an uncaught throw here used
+    // to fail their whole shared job (retried up to 3x, always on the
+    // same poisoned item, permanently losing every item in that batch).
+    // Fall back to a metadata-only extraction rather than let one item
+    // take its neighbours down.
+    console.warn(`extract: failed to store extracted text for ${item.id}, falling back to metadata only: ${(err as Error).message}`);
+    await db.from("items").update({ text: null, language, status: "extracted" }).eq("id", item.id);
+  }
 }
 
 export async function runExtractStage(env: Env, date: string): Promise<void> {

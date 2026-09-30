@@ -2,6 +2,7 @@ import { createFeedbackLink, createServiceRoleClient } from "@dailydigest/db";
 import { renderDailyBrief, type BriefContent } from "@dailydigest/email";
 import { Resend } from "resend";
 import type { Env } from "../env.js";
+import { sanitizeForPostgres } from "../lib/sanitize.js";
 
 function withFeedbackLinks(content: BriefContent, env: Env): BriefContent {
   if (!env.HMAC_SECRET) return content;
@@ -38,14 +39,6 @@ function parseRecipients(raw: string): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => EMAIL_PATTERN.test(s));
-}
-
-// Postgres text/json rejects \u0000 and unpaired surrogates ("unsupported
-// Unicode escape sequence"). Source article text occasionally carries these
-// through extraction, and it only surfaces when the rendered HTML reaches
-// the DB - strip them here rather than at every upstream text source.
-function sanitizeForPostgres(value: string): string {
-  return value.replace(/\u0000/g, "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
 }
 
 function subjectFor(content: BriefContent, dateStr: string): string {
