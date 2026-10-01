@@ -32,6 +32,20 @@ interface ItemRow {
   language: string | null;
 }
 
+// jsdom parses every <style> tag's content into a CSSOM stylesheet
+// synchronously while building the document, with no timeout of its own.
+// Pathological/malformed CSS in the wild (observed live: a 2026-10-01 run
+// stuck on "extract" for the full 3-hour job timeout, zero items processed,
+// last log line mid "Could not parse CSS stylesheet") can send that parser
+// into what is effectively an infinite loop, blocking the whole event loop
+// - nothing else in the batch can run either, and nothing catches it since
+// it never throws or rejects. Readability only needs document structure and
+// text, not styling, so stripping style content before JSDOM ever sees it
+// removes the hang vector entirely rather than trying to bound it.
+function stripStylesheets(html: string): string {
+  return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<link[^>]+rel=["']?stylesheet["']?[^>]*>/gi, "");
+}
+
 async function fetchHtml(url: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -69,7 +83,7 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
   try {
     const html = await fetchHtml(item.url);
     if (html.length > MAX_HTML_LENGTH) throw new Error(`html too large (${html.length} bytes), skipping parse`);
-    const dom = new JSDOM(html, { url: item.url });
+    const dom = new JSDOM(stripStylesheets(html), { url: item.url });
     const article = new Readability(dom.window.document).parse();
     const extracted = article?.textContent?.trim() || null;
     // Sanitize before the length check too: a source's garbled encoding can
