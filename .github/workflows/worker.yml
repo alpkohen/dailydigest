@@ -7,10 +7,19 @@ on:
     # Runs the full pipeline in stage order (seed_sources, ingest, extract;
     # more stages land as later milestones are built).
     - cron: "30 2 * * *"
+    # Every 3 hours: runs every stage up to (not including) compose_brief/
+    # deliver (worker/src/index.ts's COLLECT_STAGE_ORDER). Those stages read
+    # and write by row status, never by date, so running them repeatedly
+    # through the day is just incremental work - whatever's new since the
+    # last pass. This is what the 02:30 run used to do cold, in one
+    # multi-hour batch (ingest alone routinely 30-40 min, relevance 45-60
+    # min): by delivery time most of it is already done, so 02:30 only has
+    # a few hours' stragglers left plus compose_brief/deliver.
+    - cron: "0 */3 * * *"
   workflow_dispatch:
     inputs:
       stage:
-        description: "Stage to run (omit + all=true for the full pipeline)"
+        description: "Stage to run (omit + all=true for the full pipeline, or collect=true for every stage short of compose_brief/deliver)"
         required: false
         default: "ping"
       date:
@@ -18,6 +27,10 @@ on:
         required: false
       all:
         description: "Run the full pipeline instead of a single stage"
+        required: false
+        default: "false"
+      collect:
+        description: "Run every stage up to compose_brief/deliver (same as the every-3-hours schedule)"
         required: false
         default: "false"
 
@@ -74,7 +87,9 @@ jobs:
           # no code change or redeploy needed either way.
           WORKER_BACKGROUND_PAUSED: ${{ vars.WORKER_BACKGROUND_PAUSED }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.all }}" = "true" ]; then
+          if [ "${{ github.event.schedule }}" = "0 */3 * * *" ] || [ "${{ github.event.inputs.collect }}" = "true" ]; then
+            pnpm worker:run --collect
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.all }}" = "true" ]; then
             pnpm worker:run --all
           else
             pnpm worker:run --stage="${{ github.event.inputs.stage || 'ping' }}" --date="${{ github.event.inputs.date }}"

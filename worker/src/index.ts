@@ -78,6 +78,21 @@ const ALL_STAGE_ORDER = [
   "deliver",
 ];
 
+// Every stage up to compose_brief/deliver reads and writes by row *status*
+// (e.g. items.status = "new"/"extracted"/"embedded", stories.status = "open"
+// with summary IS NULL), never by date - "date" on these is only a
+// pipeline_runs label. That makes them safe and idempotent to run several
+// times a day: each run just picks up whatever's newly available since the
+// last one. compose_brief/deliver are the only two stages actually bound to
+// a specific period_date, so they're excluded here and stay on the once-
+// daily schedule. Spreading the rest across the day (see worker.yml's
+// second cron) means the heavy, LLM-bound stages (ingest, relevance) are
+// mostly already done by delivery time instead of running cold in a single
+// multi-hour batch every morning - the cause of this pipeline regularly
+// taking 2-3+ hours and, on 2026-10-01, silently missing its scheduled run
+// window entirely.
+const COLLECT_STAGE_ORDER = ALL_STAGE_ORDER.slice(0, ALL_STAGE_ORDER.indexOf("compose_brief"));
+
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();
   for (const arg of argv) {
@@ -115,10 +130,11 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const date = args.get("date") ?? today();
   const runAll = args.get("all") === "true";
+  const runCollect = args.get("collect") === "true";
   const stage = args.get("stage");
 
-  if (!runAll && !stage) {
-    console.error("Usage: worker --stage=<name> --date=<YYYY-MM-DD> | --all");
+  if (!runAll && !runCollect && !stage) {
+    console.error("Usage: worker --stage=<name> --date=<YYYY-MM-DD> | --all | --collect");
     process.exit(1);
   }
 
@@ -132,7 +148,7 @@ async function main() {
   const config = await loadWorkerConfig();
   await reclaimStuckRuns(env);
 
-  const stagesToRun = runAll ? ALL_STAGE_ORDER : [stage as string];
+  const stagesToRun = runAll ? ALL_STAGE_ORDER : runCollect ? COLLECT_STAGE_ORDER : [stage as string];
   for (const name of stagesToRun) {
     const run = STAGES[name];
     if (!run) {

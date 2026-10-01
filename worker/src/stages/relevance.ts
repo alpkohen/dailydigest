@@ -1,5 +1,5 @@
 import { createServiceRoleClient, type LimitsConfig, type ModelsConfig } from "@dailydigest/db";
-import { buildRelevancePrompt, callLlm, relevanceSchema } from "@dailydigest/llm";
+import { buildRelevanceBatchPrompt, callLlm, relevanceBatchSchema } from "@dailydigest/llm";
 import type { Env } from "../env.js";
 import { cosineSimilarity } from "../lib/dedup.js";
 import { fetchFewShotExamples } from "../lib/fewShot.js";
@@ -11,7 +11,21 @@ const PAGE_SIZE = 1000;
 // certainly this pool outrunning the fast-role model's rate limit and the
 // one immediate retry landing on the same limit. Matched to the other
 // per-item LLM stages (enrich, questionEvidence) instead of standing out.
+// Now bounds concurrent *batches* rather than concurrent items, so the
+// effective items-in-flight is roughly CONCURRENCY * BATCH_SIZE - kept at
+// the same value since it was tuned against this model's actual rate
+// limit, not against item count.
 const CONCURRENCY = 8;
+// One call now scores a whole batch against one topic instead of one
+// item/topic pair, so topic context (description, exclusions, few-shot
+// examples) is sent once per batch instead of once per item - fewer,
+// larger calls instead of many small ones. Relevance was observed live
+// taking 45-60 minutes/day at one call per item/topic pair (9737 pairs on
+// 2026-09-30); this cuts call count roughly BATCH_SIZE-fold for the same
+// work. Kept modest: a bigger batch risks the model's per-item attention
+// degrading, and one bad/truncated response now costs a whole batch's
+// worth of retries instead of one item's.
+const BATCH_SIZE = 10;
 
 interface TopicRow {
   id: string;
@@ -99,75 +113,99 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
   let archived = 0;
   let leftForRetry = 0;
 
-  await runPool(items, CONCURRENCY, async (item) => {
-    if (!item.embedding) return;
-    let clearedAnyThreshold = false;
-    // A full-system audit found items being marked not_relevant (silently
-    // dropped from briefs) purely because their LLM call failed, not
-    // because they scored below threshold - the two were indistinguishable
-    // from clearedAnyThreshold alone. Track failures separately so a
-    // failed call defers the item instead of misclassifying it.
-    let hadFailure = false;
+  // Per-item outcome, aggregated across every topic batch it appeared in
+  // (an item can clear the cosine prefilter for more than one topic).
+  // A full-system audit found items being marked not_relevant (silently
+  // dropped from briefs) purely because their LLM call failed, not because
+  // they scored below threshold - the two were indistinguishable from
+  // clearedAnyThreshold alone. Track failures separately so a failed call
+  // defers the item instead of misclassifying it.
+  const outcomes = new Map<string, { clearedAnyThreshold: boolean; hadFailure: boolean }>();
+  function markOutcome(itemId: string, cleared: boolean, failed: boolean): void {
+    const prev = outcomes.get(itemId) ?? { clearedAnyThreshold: false, hadFailure: false };
+    outcomes.set(itemId, { clearedAnyThreshold: prev.clearedAnyThreshold || cleared, hadFailure: prev.hadFailure || failed });
+  }
 
-    for (const topic of topics as TopicRow[]) {
-      if (!topic.embedding) continue;
-      const cosine = cosineSimilarity(item.embedding, topic.embedding);
-      if (cosine < limits.thresholds.relevance_prefilter_cosine) continue;
-
-      try {
-        const result = await callLlm({
-          role: "fast",
-          promptName: "relevance",
-          prompt: buildRelevancePrompt({
-            itemTitle: item.title,
-            itemStandfirst: item.standfirst,
-            itemLanguage: item.language,
-            topicName: topic.name,
-            topicDescription: topic.description,
-            topicExclusions: topic.exclusions ?? [],
-            positiveExamples: fewShotByTopic.get(topic.id)?.positive,
-            negativeExamples: fewShotByTopic.get(topic.id)?.negative,
-          }),
-          schema: relevanceSchema,
-          modelsConfig: models,
-          apiKeys: { anthropic: env.ANTHROPIC_API_KEY, openai: env.OPENAI_API_KEY },
-          db,
-          ownerId: env.OWNER_ID,
-          runId: run.id,
-          stage: "relevance",
-          maxTokens: 256,
-        });
-
-        await db.from("item_topic_scores").upsert(
-          {
-            owner_id: env.OWNER_ID,
-            item_id: item.id,
-            topic_id: topic.id,
-            score: result.score,
-            reason: result.reason,
-            model: models.roles.fast.model,
-          },
-          { onConflict: "item_id,topic_id" },
-        );
-        scoredPairs++;
-        if (result.score >= topic.relevance_threshold) clearedAnyThreshold = true;
-      } catch (err) {
-        hadFailure = true;
-        console.error(`relevance: failed scoring item ${item.id} against topic ${topic.id}: ${(err as Error).message}`);
-      }
+  interface BatchTask {
+    topic: TopicRow;
+    batch: ItemRow[];
+  }
+  const tasks: BatchTask[] = [];
+  for (const topic of topics as TopicRow[]) {
+    if (!topic.embedding) continue;
+    const candidates = items.filter(
+      (item) => item.embedding && cosineSimilarity(item.embedding, topic.embedding!) >= limits.thresholds.relevance_prefilter_cosine,
+    );
+    for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+      tasks.push({ topic, batch: candidates.slice(i, i + BATCH_SIZE) });
     }
+  }
 
-    const outcome = resolveRelevanceOutcome(clearedAnyThreshold, hadFailure);
+  await runPool(tasks, CONCURRENCY, async ({ topic, batch }) => {
+    try {
+      const result = await callLlm({
+        role: "fast",
+        promptName: "relevance_batch",
+        prompt: buildRelevanceBatchPrompt({
+          items: batch.map((item) => ({ id: item.id, title: item.title, standfirst: item.standfirst, language: item.language })),
+          topicName: topic.name,
+          topicDescription: topic.description,
+          topicExclusions: topic.exclusions ?? [],
+          positiveExamples: fewShotByTopic.get(topic.id)?.positive,
+          negativeExamples: fewShotByTopic.get(topic.id)?.negative,
+        }),
+        schema: relevanceBatchSchema,
+        modelsConfig: models,
+        apiKeys: { anthropic: env.ANTHROPIC_API_KEY, openai: env.OPENAI_API_KEY },
+        db,
+        ownerId: env.OWNER_ID,
+        runId: run.id,
+        stage: "relevance",
+        // Headroom per item for id + score + one-sentence reason as JSON,
+        // plus a fixed buffer for the wrapping object.
+        maxTokens: 128 + batch.length * 80,
+      });
+
+      const byId = new Map(result.results.map((r) => [r.id, r]));
+      const rows: { owner_id: string; item_id: string; topic_id: string; score: number; reason: string; model: string }[] = [];
+      for (const item of batch) {
+        const scored = byId.get(item.id);
+        if (!scored) {
+          // The model dropped this id from its response - treat like a
+          // failed call (defer to retry), never silently archive it.
+          markOutcome(item.id, false, true);
+          continue;
+        }
+        rows.push({
+          owner_id: env.OWNER_ID,
+          item_id: item.id,
+          topic_id: topic.id,
+          score: scored.score,
+          reason: scored.reason,
+          model: models.roles.fast.model,
+        });
+        scoredPairs++;
+        markOutcome(item.id, scored.score >= topic.relevance_threshold, false);
+      }
+      if (rows.length > 0) await db.from("item_topic_scores").upsert(rows, { onConflict: "item_id,topic_id" });
+    } catch (err) {
+      console.error(`relevance: failed scoring batch of ${batch.length} items against topic ${topic.id}: ${(err as Error).message}`);
+      for (const item of batch) markOutcome(item.id, false, true);
+    }
+  });
+
+  for (const item of items) {
+    const outcome = resolveRelevanceOutcome(outcomes.get(item.id)?.clearedAnyThreshold ?? false, outcomes.get(item.id)?.hadFailure ?? false);
     if (outcome === "retry") {
       // Leave status as "embedded" (unchanged): the next relevance run
       // picks it back up via the same status="embedded" query this stage
       // already uses, so no separate retry path or item status is needed.
       leftForRetry++;
-      return;
+      continue;
     }
     if (outcome === "not_relevant") archived++;
     await db.from("items").update({ status: outcome }).eq("id", item.id);
-  });
+  }
 
   await db
     .from("pipeline_runs")
