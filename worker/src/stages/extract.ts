@@ -1,11 +1,10 @@
 import { createServiceRoleClient } from "@dailydigest/db";
-import { Readability } from "@mozilla/readability";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { JSDOM } from "jsdom";
 import type { Env } from "../env.js";
 import { claimJobs, completeJob, enqueueJobs, failJob, type JobRow } from "../jobs.js";
 import { computeSimhash, textHash, weightedSimhashInput } from "../lib/hash.js";
 import { detectLanguage } from "../lib/language.js";
+import { ParsePool } from "../lib/parsePool.js";
 import { sanitizeForPostgres } from "../lib/sanitize.js";
 
 const CLAIM_BATCH_SIZE = 5;
@@ -23,6 +22,13 @@ const MAX_TEXT_LENGTH = 100_000;
 // ever reaches JSDOM rather than relying on the post-parse text length
 // check, which only applies once the (possibly very slow) parse is done.
 const MAX_HTML_LENGTH = 2_000_000;
+// Parsing now happens in worker threads (lib/parsePool.ts) specifically so a
+// hang like the one above - whatever causes the *next* one, not just the
+// CSS case already patched - can be killed on a timeout instead of freezing
+// the whole stage for a full 3-hour job timeout, as happened live on
+// 2026-10-01. Pool size is small and fixed: parsing is CPU-bound, so more
+// workers than cores just adds contention, not throughput.
+const PARSE_POOL_SIZE = 4;
 
 interface ItemRow {
   id: string;
@@ -30,20 +36,6 @@ interface ItemRow {
   title: string;
   paywalled: boolean;
   language: string | null;
-}
-
-// jsdom parses every <style> tag's content into a CSSOM stylesheet
-// synchronously while building the document, with no timeout of its own.
-// Pathological/malformed CSS in the wild (observed live: a 2026-10-01 run
-// stuck on "extract" for the full 3-hour job timeout, zero items processed,
-// last log line mid "Could not parse CSS stylesheet") can send that parser
-// into what is effectively an infinite loop, blocking the whole event loop
-// - nothing else in the batch can run either, and nothing catches it since
-// it never throws or rejects. Readability only needs document structure and
-// text, not styling, so stripping style content before JSDOM ever sees it
-// removes the hang vector entirely rather than trying to bound it.
-function stripStylesheets(html: string): string {
-  return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<link[^>]+rel=["']?stylesheet["']?[^>]*>/gi, "");
 }
 
 async function fetchHtml(url: string): Promise<string> {
@@ -73,7 +65,7 @@ async function fetchHtml(url: string): Promise<string> {
  * detection, and text_hash/simhash computation (SPEC.md section 6, stage 2
  * "Extract"; rule 6: paywalled items keep title/standfirst/metadata only).
  */
-async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
+async function extractOne(db: SupabaseClient, pool: ParsePool, item: ItemRow): Promise<void> {
   if (item.paywalled) {
     await db.from("items").update({ status: "extracted" }).eq("id", item.id);
     return;
@@ -83,9 +75,7 @@ async function extractOne(db: SupabaseClient, item: ItemRow): Promise<void> {
   try {
     const html = await fetchHtml(item.url);
     if (html.length > MAX_HTML_LENGTH) throw new Error(`html too large (${html.length} bytes), skipping parse`);
-    const dom = new JSDOM(stripStylesheets(html), { url: item.url });
-    const article = new Readability(dom.window.document).parse();
-    const extracted = article?.textContent?.trim() || null;
+    const extracted = await pool.parse(html, item.url);
     // Sanitize before the length check too: a source's garbled encoding can
     // produce \u0000/unpaired surrogates that Postgres rejects outright
     // (code-review finding: this write was unguarded, and with items now
@@ -163,44 +153,49 @@ export async function runExtractStage(env: Env, date: string): Promise<void> {
 
   let processed = 0;
   let failed = 0;
+  const pool = new ParsePool(PARSE_POOL_SIZE);
 
-  while (true) {
-    const jobs: JobRow[] = await claimJobs(db, { ownerId: env.OWNER_ID, stage: "extract", limit: CLAIM_BATCH_SIZE });
-    if (jobs.length === 0) break;
+  try {
+    while (true) {
+      const jobs: JobRow[] = await claimJobs(db, { ownerId: env.OWNER_ID, stage: "extract", limit: CLAIM_BATCH_SIZE });
+      if (jobs.length === 0) break;
 
-    for (const job of jobs) {
-      try {
-        const itemIds = (job.payload as { itemIds: string[] }).itemIds ?? [];
-        const { data: items, error } = await db
-          .from("items")
-          .select("id, url, title, paywalled, language")
-          .eq("owner_id", env.OWNER_ID)
-          .in("id", itemIds);
-        if (error) throw new Error(error.message);
+      for (const job of jobs) {
+        try {
+          const itemIds = (job.payload as { itemIds: string[] }).itemIds ?? [];
+          const { data: items, error } = await db
+            .from("items")
+            .select("id, url, title, paywalled, language")
+            .eq("owner_id", env.OWNER_ID)
+            .in("id", itemIds);
+          if (error) throw new Error(error.message);
 
-        // Each item is an independent network fetch + parse; running them
-        // one at a time made a 1000+ item day take well over an hour.
-        // Small fixed concurrency keeps memory/CPU (JSDOM per item) bounded
-        // while cutting wall time roughly proportionally.
-        // Sources produce 1500-3000 new items on a typical day (confirmed
-        // live: 4 consecutive days all in that range, not a one-off spike).
-        // These are I/O-bound network fetches, not CPU-bound, so a much
-        // higher concurrency than the CLAIM_BATCH_SIZE/ITEMS_PER_JOB knobs
-        // suggest is safe and needed to clear that volume in reasonable time.
-        const ITEM_CONCURRENCY = 25;
-        const itemsToProcess = (items ?? []) as ItemRow[];
-        for (let i = 0; i < itemsToProcess.length; i += ITEM_CONCURRENCY) {
-          await Promise.all(itemsToProcess.slice(i, i + ITEM_CONCURRENCY).map((item) => extractOne(db, item)));
+          // Each item is an independent network fetch + parse; running them
+          // one at a time made a 1000+ item day take well over an hour.
+          // Small fixed concurrency keeps memory/CPU (JSDOM per item) bounded
+          // while cutting wall time roughly proportionally.
+          // Sources produce 1500-3000 new items on a typical day (confirmed
+          // live: 4 consecutive days all in that range, not a one-off spike).
+          // These are I/O-bound network fetches, not CPU-bound, so a much
+          // higher concurrency than the CLAIM_BATCH_SIZE/ITEMS_PER_JOB knobs
+          // suggest is safe and needed to clear that volume in reasonable time.
+          const ITEM_CONCURRENCY = 25;
+          const itemsToProcess = (items ?? []) as ItemRow[];
+          for (let i = 0; i < itemsToProcess.length; i += ITEM_CONCURRENCY) {
+            await Promise.all(itemsToProcess.slice(i, i + ITEM_CONCURRENCY).map((item) => extractOne(db, pool, item)));
+          }
+
+          await completeJob(db, job.id);
+          processed++;
+        } catch (err) {
+          console.error(`extract job ${job.id} failed:`, (err as Error).message);
+          await failJob(db, job, err);
+          failed++;
         }
-
-        await completeJob(db, job.id);
-        processed++;
-      } catch (err) {
-        console.error(`extract job ${job.id} failed:`, (err as Error).message);
-        await failJob(db, job, err);
-        failed++;
       }
     }
+  } finally {
+    await pool.destroy();
   }
 
   await db
