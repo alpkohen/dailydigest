@@ -1,9 +1,21 @@
 import { createServiceRoleClient, type LimitsConfig } from "@dailydigest/db";
 import type { Env } from "../env.js";
 import { findCanonicalMatch, type DedupCandidate } from "../lib/dedup.js";
+import { runPool } from "../lib/pool.js";
+
+const LINK_CONCURRENCY = 10;
 
 const WINDOW_MS = 48 * 60 * 60 * 1000;
-const PAGE_SIZE = 1000;
+// Each row carries a full embedding vector (1024 floats). At 1000/page that
+// serializes to tens of MB of JSON per request - observed live on
+// 2026-10-01 timing out ("canceling statement due to statement timeout")
+// once a multi-day backlog pushed the candidate count past 5000, and still
+// not finished after 55+ minutes on a retry with no timeout. The pairwise
+// comparison itself (findCanonicalMatch) is cheap even at that scale - this
+// is a fetch-size problem, not an algorithmic one. Smaller pages trade more
+// round trips for a payload Postgres/PostgREST can actually serialize and
+// transfer within a normal statement timeout.
+const PAGE_SIZE = 200;
 
 interface ItemRow {
   id: string;
@@ -70,7 +82,7 @@ export async function runDedupStage(env: Env, limits: LimitsConfig, date: string
     }
   }
 
-  for (const link of duplicateLinks) {
+  await runPool(duplicateLinks, LINK_CONCURRENCY, async (link) => {
     // Status is left untouched: relevance scoring (stage 5) filters on
     // canonical_item_id is null, which already excludes duplicates.
     const { error } = await db
@@ -78,7 +90,7 @@ export async function runDedupStage(env: Env, limits: LimitsConfig, date: string
       .update({ canonical_item_id: link.canonicalId })
       .eq("id", link.id);
     if (error) console.error(`dedup: failed to link ${link.id} -> ${link.canonicalId}: ${error.message}`);
-  }
+  });
 
   await db
     .from("pipeline_runs")
