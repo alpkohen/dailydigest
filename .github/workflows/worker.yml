@@ -89,7 +89,7 @@ jobs:
           # `gh variable set WORKER_BACKGROUND_PAUSED --body false` resumes -
           # no code change or redeploy needed either way.
           WORKER_BACKGROUND_PAUSED: ${{ vars.WORKER_BACKGROUND_PAUSED }}
-          LLM_RUN_BUDGET_USD: ${{ github.event.inputs.budget_usd }}
+          LLM_RUN_BUDGET_USD: ${{ github.event.inputs.budget_usd || vars.LLM_RUN_BUDGET_USD }}
         run: |
           if [ "${{ github.event.schedule }}" = "0 */3 * * *" ] || [ "${{ github.event.inputs.collect }}" = "true" ]; then
             pnpm worker:run --collect
