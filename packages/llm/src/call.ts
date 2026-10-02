@@ -22,6 +22,33 @@ export interface CallLlmParams<T> {
   stage?: string;
 }
 
+// Per-process spend cap. A worker process is one stage run, so this bounds
+// what a single run can spend: set LLM_RUN_BUDGET_USD and every callLlm
+// after the running total reaches it throws instead of calling the model.
+// Callers already treat a thrown call as a failure and leave the work
+// pending (relevance leaves items "embedded", enrich leaves summary null),
+// so the run winds down cleanly and the next run picks up the rest. In-flight
+// concurrent calls can overshoot by a few calls, not by a stage.
+let runSpentUsd = 0;
+
+export class RunBudgetExceededError extends Error {
+  constructor(spent: number, budget: number) {
+    super(`run LLM budget exceeded: USD ${spent.toFixed(2)} spent of ${budget.toFixed(2)} (LLM_RUN_BUDGET_USD)`);
+    this.name = "RunBudgetExceededError";
+  }
+}
+
+function runBudgetUsd(): number | null {
+  const raw = process.env.LLM_RUN_BUDGET_USD;
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+export function getRunSpentUsd(): number {
+  return runSpentUsd;
+}
+
 function buildProvider(
   name: "anthropic" | "openai",
   apiKeys: CallLlmParams<unknown>["apiKeys"],
@@ -49,6 +76,9 @@ function extractJson(text: string): unknown {
  * SPEC.md section 7), and always logs to llm_calls with tokens and cost.
  */
 export async function callLlm<T>(params: CallLlmParams<T>): Promise<T> {
+  const budget = runBudgetUsd();
+  if (budget != null && runSpentUsd >= budget) throw new RunBudgetExceededError(runSpentUsd, budget);
+
   const roleConfig = params.modelsConfig.roles[params.role];
   const provider = buildProvider(roleConfig.provider, params.apiKeys);
   const maxTokens = params.maxTokens ?? 1024;
@@ -74,6 +104,14 @@ export async function callLlm<T>(params: CallLlmParams<T>): Promise<T> {
       });
       const parsed = params.schema.parse(extractJson(result.text));
 
+      const costUsd = computeCostUsd(
+        roleConfig.model,
+        result.inputTokens,
+        result.outputTokens,
+        params.modelsConfig.prices_per_million_tokens,
+      );
+      runSpentUsd += costUsd;
+
       await logLlmCall(params.db, {
         ownerId: params.ownerId,
         runId: params.runId,
@@ -82,12 +120,7 @@ export async function callLlm<T>(params: CallLlmParams<T>): Promise<T> {
         model: roleConfig.model,
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens,
-        costUsd: computeCostUsd(
-          roleConfig.model,
-          result.inputTokens,
-          result.outputTokens,
-          params.modelsConfig.prices_per_million_tokens,
-        ),
+        costUsd,
         latencyMs: Date.now() - startedAt,
         ok: true,
       });
