@@ -1,7 +1,8 @@
 import { createServiceRoleClient, type LimitsConfig } from "@dailydigest/db";
 import type { Env } from "../env.js";
-import { findCanonicalMatch, type DedupCandidate } from "../lib/dedup.js";
+import { findCanonicalMatch, toUnitVector, type DedupCandidate } from "../lib/dedup.js";
 import { runPool } from "../lib/pool.js";
+import { parseEmbedding } from "../lib/vector.js";
 
 const LINK_CONCURRENCY = 10;
 
@@ -22,7 +23,7 @@ interface ItemRow {
   published_at: string | null;
   created_at: string;
   simhash: string | null;
-  embedding: number[] | null;
+  embedding: unknown;
 }
 
 /**
@@ -49,6 +50,7 @@ export async function runDedupStage(env: Env, limits: LimitsConfig, date: string
       .eq("owner_id", env.OWNER_ID)
       .eq("status", "embedded")
       .is("canonical_item_id", null)
+      .order("id")
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (error) throw new Error(`Failed to load embedded items: ${error.message}`);
     rows.push(...((data ?? []) as ItemRow[]));
@@ -60,20 +62,26 @@ export async function runDedupStage(env: Env, limits: LimitsConfig, date: string
       id: row.id,
       publishedAt: Date.parse(row.published_at ?? row.created_at),
       simhash: row.simhash,
-      embedding: row.embedding,
+      embedding: parseEmbedding(row.embedding),
+      unit: toUnitVector(parseEmbedding(row.embedding)),
     }))
     .sort((a, b) => a.publishedAt - b.publishedAt);
 
   const canonicalPool: DedupCandidate[] = [];
   const duplicateLinks: { id: string; canonicalId: string }[] = [];
 
+  // Candidates are in publication order, so a pool entry too old for this
+  // candidate is too old for every later one: the cutoff only moves forward.
+  let poolStart = 0;
   for (const candidate of candidates) {
+    while (poolStart < canonicalPool.length && canonicalPool[poolStart]!.publishedAt < candidate.publishedAt - WINDOW_MS) poolStart++;
     const matchId = findCanonicalMatch(
       candidate,
       canonicalPool,
       WINDOW_MS,
       limits.thresholds.dedup_simhash_distance,
       limits.thresholds.dedup_cosine,
+      poolStart,
     );
     if (matchId) {
       duplicateLinks.push({ id: candidate.id, canonicalId: matchId });

@@ -3,6 +3,7 @@ import { buildSameStoryPrompt, callLlm, sameStorySchema } from "@dailydigest/llm
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Env } from "../env.js";
 import { decideCluster, updateCentroid, type StoryCandidate } from "../lib/cluster.js";
+import { parseEmbedding } from "../lib/vector.js";
 
 const WINDOW_MS = 72 * 60 * 60 * 1000;
 const PAGE_SIZE = 1000;
@@ -80,7 +81,7 @@ export async function runClusterStage(env: Env, models: ModelsConfig, limits: Li
     story_items: { count: number }[];
   }[]).map((row) => ({
     id: row.id,
-    centroid: row.centroid,
+    centroid: parseEmbedding(row.centroid) ?? [],
     lastUpdatedAt: Date.parse(row.last_updated_at),
     itemCount: row.story_items?.[0]?.count ?? 1,
   }));
@@ -95,7 +96,7 @@ export async function runClusterStage(env: Env, models: ModelsConfig, limits: Li
       .is("canonical_item_id", null)
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (error) throw new Error(`Failed to load scored items: ${error.message}`);
-    items.push(...((data ?? []) as ItemRow[]));
+    items.push(...((data ?? []) as ItemRow[]).map((row) => ({ ...row, embedding: parseEmbedding(row.embedding) })));
     if (!data || data.length < PAGE_SIZE) break;
   }
   items.sort((a, b) => Date.parse(a.published_at ?? a.created_at) - Date.parse(b.published_at ?? b.created_at));

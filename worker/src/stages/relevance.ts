@@ -2,6 +2,7 @@ import { createServiceRoleClient, type LimitsConfig, type ModelsConfig } from "@
 import { buildRelevanceBatchPrompt, callLlm, relevanceBatchSchema } from "@dailydigest/llm";
 import type { Env } from "../env.js";
 import { cosineSimilarity } from "../lib/dedup.js";
+import { parseEmbedding } from "../lib/vector.js";
 import { fetchFewShotExamples } from "../lib/fewShot.js";
 import { runPool } from "../lib/pool.js";
 
@@ -90,6 +91,8 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
     return;
   }
 
+  const topicRows: TopicRow[] = (topics as TopicRow[]).map((topic) => ({ ...topic, embedding: parseEmbedding(topic.embedding) }));
+
   const items: ItemRow[] = [];
   for (let page = 0; ; page++) {
     const { data, error } = await db
@@ -100,12 +103,12 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
       .is("canonical_item_id", null)
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (error) throw new Error(`Failed to load embedded items: ${error.message}`);
-    items.push(...((data ?? []) as ItemRow[]));
+    items.push(...((data ?? []) as ItemRow[]).map((row) => ({ ...row, embedding: parseEmbedding(row.embedding) })));
     if (!data || data.length < PAGE_SIZE) break;
   }
 
   const fewShotByTopic = new Map<string, { positive: string[]; negative: string[] }>();
-  for (const topic of topics as TopicRow[]) {
+  for (const topic of topicRows) {
     fewShotByTopic.set(topic.id, await fetchFewShotExamples(db, env.OWNER_ID, topic.id));
   }
 
@@ -131,7 +134,7 @@ export async function runRelevanceStage(env: Env, models: ModelsConfig, limits: 
     batch: ItemRow[];
   }
   const tasks: BatchTask[] = [];
-  for (const topic of topics as TopicRow[]) {
+  for (const topic of topicRows) {
     if (!topic.embedding) continue;
     const candidates = items.filter(
       (item) => item.embedding && cosineSimilarity(item.embedding, topic.embedding!) >= limits.thresholds.relevance_prefilter_cosine,
