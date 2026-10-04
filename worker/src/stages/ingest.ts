@@ -4,6 +4,7 @@ import { fetchExaResults } from "../connectors/exa.js";
 import { fetchGdeltArticles } from "../connectors/gdelt.js";
 import { fetchOpenAlexWorksByIssn } from "../connectors/openalex.js";
 import { fetchRssFeed } from "../connectors/rss.js";
+import { fetchSitemapItems } from "../connectors/sitemap.js";
 import type { Env } from "../env.js";
 import { canonicalizeUrl } from "../lib/canonicalUrl.js";
 
@@ -126,8 +127,51 @@ async function insertItems(
   return data ?? [];
 }
 
-async function fetchSource(source: SourceRow): Promise<{ items: ItemInput[]; research?: Awaited<ReturnType<typeof fetchOpenAlexWorksByIssn>> }> {
+const SITEMAP_WINDOW_DAYS = 3;
+
+/** Which of these URLs are already stored, so sitemap pages are fetched once. */
+async function knownUrls(db: SupabaseClient, ownerId: string, urls: string[]): Promise<Set<string>> {
+  const byCanonical = new Map<string, string>();
+  for (const url of urls) {
+    try {
+      byCanonical.set(canonicalizeUrl(url), url);
+    } catch {
+      // Unparseable URLs are simply treated as unknown.
+    }
+  }
+  const canonical = [...byCanonical.keys()];
+  const known = new Set<string>();
+  for (let i = 0; i < canonical.length; i += 100) {
+    const { data, error } = await db
+      .from("items")
+      .select("canonical_url")
+      .eq("owner_id", ownerId)
+      .in("canonical_url", canonical.slice(i, i + 100));
+    if (error) throw new Error(`Failed to check known urls: ${error.message}`);
+    for (const row of data ?? []) known.add(byCanonical.get(row.canonical_url as string)!);
+  }
+  return known;
+}
+
+async function fetchSource(
+  db: SupabaseClient,
+  ownerId: string,
+  source: SourceRow,
+): Promise<{ items: ItemInput[]; research?: Awaited<ReturnType<typeof fetchOpenAlexWorksByIssn>> }> {
   if (!source.url_or_query) return { items: [] };
+  if (source.type === "sitemap") {
+    const items = await fetchSitemapItems(source.url_or_query, SITEMAP_WINDOW_DAYS, (urls) => knownUrls(db, ownerId, urls));
+    return {
+      items: items.map((item) => ({
+        url: item.url,
+        title: item.title,
+        standfirst: item.standfirst,
+        publishedAt: item.publishedAt,
+        language: source.language,
+        paywalled: source.paywalled,
+      })),
+    };
+  }
   if (source.type === "rss") {
     const items = await fetchRssFeed(source.url_or_query);
     return {
@@ -216,7 +260,7 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
     .select("id, name, type, url_or_query, language, last_fetched_at, paywalled")
     .eq("owner_id", env.OWNER_ID)
     .eq("active", true)
-    .in("type", ["rss", "api_openalex"]);
+    .in("type", ["rss", "sitemap", "api_openalex"]);
   if (sourcesError) throw new Error(`Failed to load sources: ${sourcesError.message}`);
 
   // A source with no feed URL can never deliver: count it as failing so it
@@ -234,14 +278,16 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
   const configured = ((sources ?? []) as SourceRow[]).filter((s) => s.url_or_query);
   await mapWithConcurrency(configured, limits.pipeline.ingest_concurrency, async (source) => {
     try {
-      const fetched = await withTimeout(fetchSource(source), SOURCE_TIMEOUT_MS, source.name);
+      const fetched = await withTimeout(fetchSource(db, env.OWNER_ID, source), SOURCE_TIMEOUT_MS, source.name);
       const rows = await insertItems(db, env.OWNER_ID, source.id, fetched.items, limits.max_items_per_source_per_run);
       if (fetched.research && rows.length > 0) await linkResearchItems(db, env.OWNER_ID, rows, fetched.research);
       inserted += rows.length;
-      if (source.last_fetched_at && rows.length >= GAP_SUSPECT_MIN_ITEMS && rows.length === fetched.items.length) {
+      // Sitemaps return only new entries by design, so "all new" is normal there.
+      if (source.type === "rss" && source.last_fetched_at && rows.length >= GAP_SUSPECT_MIN_ITEMS && rows.length === fetched.items.length) {
         gapSuspects.push(source.name);
       }
-      // OpenAlex journals publish rarely; only feeds are judged stale.
+      // OpenAlex journals publish rarely and sitemaps return only new
+      // entries; only feeds are judged stale.
       const stale = source.type === "rss" && isStale(fetched.items);
       if (stale) staleSources.push(source.name);
       await recordSourceHealth(db, source.id, true, stale);
