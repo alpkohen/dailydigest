@@ -46,7 +46,8 @@ Group the new articles by the real-world event they report.
 - If an article reports an event already listed above, assign it to that event.
 - Otherwise put it in a new event. Articles about the same new event go in the same new event. When unsure whether two articles are the same event, keep them separate.
 - Every article number must appear exactly once, either in "assign" or in one "new_events" entry.
-- For each new event write, in Turkish: a short neutral title and one plain sentence saying what happened. Use only facts present in the articles. No em dashes, no hype.
+- For each new event write, in Turkish: a neutral title of at most 10 words and one plain sentence of at most 25 words saying what happened. Use only facts present in the articles. No em dashes, no hype.
+- Output only the JSON object, nothing before or after it.
 - tier: 1 = major development with significant consequences, 2 = notable development worth following, 3 = minor or routine.
 
 Respond with only a JSON object: {"assign": [{"i": <article>, "e": <event number without the E>}], "new_events": [{"items": [<article numbers>], "title": "...", "summary": "...", "tier": 1}]}`;

@@ -12,7 +12,9 @@ max_items_per_source_per_run: 100
 pipeline:
   ingest_concurrency: 8
   match_batch_size: 60
-  group_batch_size: 60
+  # Small on purpose: at 60 the model's output (a Turkish title+summary per
+  # new event) overran the token limit and came back truncated.
+  group_batch_size: 20
   # Events older than this stop accepting new articles.
   group_window_hours: 48
   # A newly created topic is matched against this many days of stored items.

@@ -34,7 +34,7 @@ export const limitsConfigSchema = z.object({
     .object({
       ingest_concurrency: z.number().int().positive().default(8),
       match_batch_size: z.number().int().positive().default(60),
-      group_batch_size: z.number().int().positive().default(60),
+      group_batch_size: z.number().int().positive().default(20),
       group_window_hours: z.number().int().positive().default(48),
       topic_backfill_days: z.number().int().positive().default(7),
       retention_unmatched_days: z.number().int().positive().default(90),

@@ -205,7 +205,9 @@ export async function runGroupStage(env: Env, models: ModelsConfig, limits: Limi
           ownerId: env.OWNER_ID,
           runId: run.id,
           stage: "group",
-          maxTokens: 4000,
+          // The fast model spends part of this budget reasoning before it
+          // writes; 4000 truncated the JSON on 20+ item batches.
+          maxTokens: 8000,
         });
       } catch (err) {
         aiFailures++;
