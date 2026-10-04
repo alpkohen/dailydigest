@@ -74,7 +74,10 @@ export function resolveGrouping(
   return { attach, created };
 }
 
-async function loadScoredItems(db: SupabaseClient, ownerId: string): Promise<ScoredItem[]> {
+async function loadScoredItems(db: SupabaseClient, ownerId: string, sinceDays: number): Promise<ScoredItem[]> {
+  // Bounded to recent items (match window or a new topic's backfill), so a
+  // leftover backlog can never turn one run into hundreds of calls.
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
   const all: ScoredItem[] = [];
   for (let page = 0; ; page++) {
     const { data, error } = await db
@@ -82,6 +85,7 @@ async function loadScoredItems(db: SupabaseClient, ownerId: string): Promise<Sco
       .select("id, title, standfirst, sources(name)")
       .eq("owner_id", ownerId)
       .eq("status", "scored")
+      .gte("created_at", since)
       .order("created_at", { ascending: true })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (error) throw new Error(`Failed to load scored items: ${error.message}`);
@@ -140,7 +144,7 @@ export async function runGroupStage(env: Env, models: ModelsConfig, limits: Limi
     .single();
   if (runError || !run) throw new Error(`Failed to create pipeline_runs row: ${runError?.message}`);
 
-  const items = await loadScoredItems(db, env.OWNER_ID);
+  const items = await loadScoredItems(db, env.OWNER_ID, limits.pipeline.topic_backfill_days + 1);
   if (items.length === 0) {
     console.log("group: nothing to group");
     await db.from("pipeline_runs").update({ finished_at: new Date().toISOString(), status: "ok", stats: { stage: "group", date, items: 0 } }).eq("id", run.id);
@@ -185,7 +189,9 @@ export async function runGroupStage(env: Env, models: ModelsConfig, limits: Limi
       let result: EventGroupResult | null = null;
       try {
         result = await callLlm({
-          role: "mid",
+          // "fast", not "mid": measured live, the mid model spent ~3k output
+          // tokens and 30s per call on this task (USD 0.57 for one run).
+          role: "fast",
           promptName: "event_group",
           prompt: buildEventGroupPrompt({
             topicName: topic.name,

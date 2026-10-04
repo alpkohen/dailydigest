@@ -1,3 +1,7 @@
+-- The status backfill below touches a few thousand rows on a small,
+-- IO-throttled instance; the pooler's default statement timeout is too short.
+set local statement_timeout = '10min';
+
 -- Simplified pipeline (2026-10-04 rebuild): ingest -> match -> group ->
 -- daily brief. Items keep only feed metadata (title/standfirst), are matched
 -- to topics by keyword OR one batched LLM call, and matched items are grouped
@@ -21,7 +25,8 @@ alter table items add constraint items_status_check check (
 );
 
 -- Archive search / Ask must find items with no embedding (the new pipeline
--- doesn't embed every item): those match on full-text alone.
+-- doesn't embed every item) and no stored full text (only feed metadata is
+-- kept now): those match on title + feed summary.
 create or replace function search_items(
   p_owner_id uuid,
   p_query_embedding vector(1024),
@@ -56,7 +61,10 @@ begin
     i.published_at,
     (
       coalesce(1 - (i.embedding <=> p_query_embedding), 0) * 0.6
-      + coalesce(ts_rank(i.fts, websearch_to_tsquery('simple', p_query_text)), 0) * 0.4
+      + greatest(
+          coalesce(ts_rank(i.fts, websearch_to_tsquery('simple', p_query_text)), 0),
+          coalesce(ts_rank(to_tsvector('simple', coalesce(i.title, '') || ' ' || coalesce(i.standfirst, '')), websearch_to_tsquery('simple', p_query_text)), 0)
+        ) * 0.4
     )::real as score
   from items i
   left join sources s on s.id = i.source_id
@@ -65,6 +73,7 @@ begin
     and (
       (i.embedding is not null and p_query_embedding is not null)
       or i.fts @@ websearch_to_tsquery('simple', p_query_text)
+      or to_tsvector('simple', coalesce(i.title, '') || ' ' || coalesce(i.standfirst, '')) @@ websearch_to_tsquery('simple', p_query_text)
     )
     and (
       p_topic_id is null
@@ -100,14 +109,17 @@ begin
 end;
 $$;
 
--- One-time cleanup of the old pipeline's leftovers. The job queue is no
--- longer used by the daily path; its backlog was blocking newer runs.
+-- One-time cleanup of the old pipeline's leftovers.
+-- The database was at 494 MB of the 500 MB free tier. The two HNSW vector
+-- indexes (items 136 MB, stories 19 MB) only served the old embed/cluster
+-- stages; dropping them frees that space at once without rewriting rows.
+-- Vector similarity in search_items still works, as a scan.
+drop index if exists items_embedding_hnsw_idx;
+drop index if exists stories_centroid_hnsw_idx;
+-- The job queue is no longer used by the daily path; its backlog was
+-- blocking newer runs.
 delete from jobs;
 -- Items the old pipeline never finished are left as plain unmatched items
--- (still searchable), and stored full text/embeddings of unmatched items
--- are dropped: the new pipeline never reads them and they were filling the
--- free-tier disk.
+-- (still searchable), not re-matched in bulk.
 update items set status = 'not_relevant'
   where status in ('new', 'extracted', 'embedded') and created_at < now() - interval '2 days';
-update items set text = null, embedding = null
-  where status = 'not_relevant' and (text is not null or embedding is not null);
