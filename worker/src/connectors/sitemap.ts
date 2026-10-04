@@ -5,11 +5,9 @@
  * og:/meta tags. Respects robots.txt (CLAUDE.md rule 6): sitemap and page
  * fetches are skipped if the site disallows them for generic crawlers.
  */
+import { cleanTitle, fetchText, isAllowed, MAX_PAGE_BYTES, parsePageMeta, tag } from "./web.js";
 
-const USER_AGENT = "Mozilla/5.0 (dailydigest personal use)";
-const FETCH_TIMEOUT_MS = 20_000;
 const MAX_SITEMAP_BYTES = 10_000_000;
-const MAX_PAGE_BYTES = 400_000;
 const MAX_CHILD_SITEMAPS = 6;
 const UNDATED_ENTRY_CAP = 30;
 // Child sitemaps that list site furniture rather than publications
@@ -23,43 +21,11 @@ export interface SitemapEntry {
   title: string | null;
 }
 
-export interface SitemapItem {
+export interface WebItem {
   url: string;
   title: string;
   standfirst: string | null;
   publishedAt: string | null;
-}
-
-async function fetchText(url: string, maxBytes: number): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": USER_AGENT } });
-    if (!response.ok) throw new Error(`fetch failed: ${response.status} ${response.statusText}`);
-    const text = await response.text();
-    return text.length > maxBytes ? text.slice(0, maxBytes) : text;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export function decodeEntities(s: string): string {
-  return s
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .trim();
-}
-
-function tag(block: string, name: string): string | null {
-  const m = new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`, "i").exec(block);
-  return m ? decodeEntities(m[1]!) : null;
 }
 
 /** Parses a sitemap document: either child sitemaps (index) or url entries. */
@@ -96,76 +62,6 @@ export function selectRecent(entries: SitemapEntry[], sinceMs: number): SitemapE
   return [...dated, ...undated];
 }
 
-/** Drops a trailing site-name suffix ("... | Brookings", "... – ECFR"). */
-export function cleanTitle(title: string): string {
-  const m = /^(.{20,}?)\s+[|–]\s+([^|–]{1,50})$/.exec(title.trim());
-  return m ? m[1]!.trim() : title.trim();
-}
-
-/** Page metadata from og:/meta tags, falling back to <title>. */
-export function parsePageMeta(html: string): { title: string | null; description: string | null } {
-  const meta = (attr: string, value: string) => {
-    const re = new RegExp(`<meta[^>]+${attr}=["']${value}["'][^>]*>`, "i");
-    const m = re.exec(html);
-    if (!m) return null;
-    const content = /content=["']([^"']*)["']/i.exec(m[0]);
-    return content ? decodeEntities(content[1]!) : null;
-  };
-  const title = meta("property", "og:title") ?? meta("name", "twitter:title") ?? tag(html, "title");
-  const description = meta("property", "og:description") ?? meta("name", "description");
-  return { title: title || null, description: description || null };
-}
-
-// --- robots.txt (generic "User-agent: *" rules only) ---
-
-const robotsCache = new Map<string, string[]>();
-
-export function parseRobotsDisallows(robots: string): string[] {
-  const disallows: string[] = [];
-  let applies = false;
-  let sawRuleSinceAgent = false;
-  for (const raw of robots.split(/\r?\n/)) {
-    const line = raw.replace(/#.*/, "").trim();
-    const m = /^([a-z-]+)\s*:\s*(.*)$/i.exec(line);
-    if (!m) continue;
-    const key = m[1]!.toLowerCase();
-    const value = m[2]!.trim();
-    if (key === "user-agent") {
-      // Consecutive User-agent lines form one group.
-      if (sawRuleSinceAgent) applies = false;
-      sawRuleSinceAgent = false;
-      if (value === "*") applies = true;
-    } else {
-      sawRuleSinceAgent = true;
-      if (applies && key === "disallow" && value) disallows.push(value);
-    }
-  }
-  return disallows;
-}
-
-function pathMatches(path: string, rule: string): boolean {
-  const pattern = rule
-    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*")
-    .replace(/\\\$$/, "$");
-  return new RegExp(`^${pattern}`).test(path);
-}
-
-async function isAllowed(url: string): Promise<boolean> {
-  const u = new URL(url);
-  let disallows = robotsCache.get(u.host);
-  if (!disallows) {
-    try {
-      disallows = parseRobotsDisallows(await fetchText(`${u.protocol}//${u.host}/robots.txt`, 500_000));
-    } catch {
-      disallows = [];
-    }
-    robotsCache.set(u.host, disallows);
-  }
-  const path = u.pathname + u.search;
-  return !disallows.some((rule) => pathMatches(path, rule));
-}
-
 async function collectEntries(url: string, sinceMs: number, depth: number): Promise<SitemapEntry[]> {
   if (!(await isAllowed(url))) throw new Error(`robots.txt disallows ${url}`);
   const { children, entries } = parseSitemap(await fetchText(url, MAX_SITEMAP_BYTES));
@@ -180,7 +76,7 @@ async function collectEntries(url: string, sinceMs: number, depth: number): Prom
     .sort((a, b) => Date.parse(b.date!) - Date.parse(a.date!));
   // Undated children: highest-numbered first. WordPress-style indexes
   // (posts-1.xml ... posts-6.xml) append new posts to the last page.
-  const pageNumber = (url: string) => Number(/(\d+)\.xml$/i.exec(url)?.[1] ?? 0);
+  const pageNumber = (u: string) => Number(/(\d+)\.xml$/i.exec(u)?.[1] ?? 0);
   const undated = content.filter((c) => !c.date).sort((a, b) => pageNumber(b.url) - pageNumber(a.url));
   const picked = (recentChildren.length > 0 ? recentChildren : undated).slice(0, MAX_CHILD_SITEMAPS);
   const nested = await Promise.all(picked.map((c) => collectEntries(c.url, sinceMs, depth + 1).catch(() => [])));
@@ -196,7 +92,7 @@ export async function fetchSitemapItems(
   sinceDays: number,
   isKnown: (urls: string[]) => Promise<Set<string>>,
   maxNewPages = 25,
-): Promise<SitemapItem[]> {
+): Promise<WebItem[]> {
   // Floored to UTC midnight: many sitemaps give date-only lastmods
   // ("2026-10-01"), which parse as midnight and would otherwise fall just
   // outside a rolling window.
@@ -207,7 +103,7 @@ export async function fetchSitemapItems(
   const known = await isKnown(unique.map((e) => e.url));
   const fresh = unique.filter((e) => !known.has(e.url)).slice(0, maxNewPages);
 
-  const items: SitemapItem[] = [];
+  const items: WebItem[] = [];
   for (const entry of fresh) {
     if (entry.title) {
       items.push({ url: entry.url, title: entry.title, standfirst: null, publishedAt: entry.date });
@@ -216,7 +112,7 @@ export async function fetchSitemapItems(
     try {
       if (!(await isAllowed(entry.url))) continue;
       const meta = parsePageMeta(await fetchText(entry.url, MAX_PAGE_BYTES));
-      if (meta.title) items.push({ url: entry.url, title: cleanTitle(meta.title), standfirst: meta.description, publishedAt: entry.date });
+      if (meta.title) items.push({ url: entry.url, title: cleanTitle(meta.title), standfirst: meta.description, publishedAt: entry.date ?? meta.publishedAt });
     } catch {
       // One unreachable page shouldn't drop the rest of the source.
     }

@@ -38,6 +38,7 @@ export async function runSeedSourcesStage(env: Env, sourcesSeed: SourcesSeedConf
     language: source.lang ?? null,
     perspective_group_id: source.group ? (groupIdByYamlKey.get(source.group) ?? null) : null,
     paywalled: source.paywalled ?? false,
+    link_pattern: source.link_pattern ?? null,
   });
 
   const newRows = sourcesSeed.sources

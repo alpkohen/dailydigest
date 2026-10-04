@@ -4,6 +4,7 @@ import { fetchExaResults } from "../connectors/exa.js";
 import { fetchGdeltArticles } from "../connectors/gdelt.js";
 import { fetchOpenAlexWorksByIssn } from "../connectors/openalex.js";
 import { fetchRssFeed } from "../connectors/rss.js";
+import { fetchListingItems } from "../connectors/listing.js";
 import { fetchSitemapItems } from "../connectors/sitemap.js";
 import type { Env } from "../env.js";
 import { canonicalizeUrl } from "../lib/canonicalUrl.js";
@@ -39,6 +40,7 @@ interface SourceRow {
   language: string | null;
   last_fetched_at: string | null;
   paywalled: boolean;
+  link_pattern: string | null;
 }
 
 interface ItemInput {
@@ -50,6 +52,10 @@ interface ItemInput {
   language?: string | null;
   paywalled?: boolean;
   raw?: unknown;
+  /** Defaults to "new". Older articles found on a web page are stored as
+   * already unmatched, so they're known and searchable but don't land in
+   * today's feed. */
+  status?: "new" | "not_relevant";
 }
 
 function openAlexSinceDate(source: SourceRow): string {
@@ -112,7 +118,7 @@ async function insertItems(
         language: row.language ?? null,
         paywalled: row.paywalled ?? false,
         raw: row.raw ?? null,
-        status: "new",
+        status: row.status ?? "new",
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null && Boolean(row.title));
@@ -128,6 +134,9 @@ async function insertItems(
 }
 
 const SITEMAP_WINDOW_DAYS = 3;
+// A listing page shows its latest N articles regardless of age; on a
+// source's first run, the older ones are stored as already unmatched.
+const LISTING_FRESH_DAYS = 7;
 
 /** Which of these URLs are already stored, so sitemap pages are fetched once. */
 async function knownUrls(db: SupabaseClient, ownerId: string, urls: string[]): Promise<Set<string>> {
@@ -159,6 +168,22 @@ async function fetchSource(
   source: SourceRow,
 ): Promise<{ items: ItemInput[]; research?: Awaited<ReturnType<typeof fetchOpenAlexWorksByIssn>> }> {
   if (!source.url_or_query) return { items: [] };
+  if (source.type === "scrape") {
+    if (!source.link_pattern) throw new Error("listing source has no link_pattern");
+    const items = await fetchListingItems(source.url_or_query, source.link_pattern, (urls) => knownUrls(db, ownerId, urls));
+    const cutoff = Date.now() - LISTING_FRESH_DAYS * 24 * 60 * 60 * 1000;
+    return {
+      items: items.map((item) => ({
+        url: item.url,
+        title: item.title,
+        standfirst: item.standfirst,
+        publishedAt: item.publishedAt,
+        language: source.language,
+        paywalled: source.paywalled,
+        status: item.publishedAt && Date.parse(item.publishedAt) < cutoff ? "not_relevant" : "new",
+      })),
+    };
+  }
   if (source.type === "sitemap") {
     const items = await fetchSitemapItems(source.url_or_query, SITEMAP_WINDOW_DAYS, (urls) => knownUrls(db, ownerId, urls));
     return {
@@ -257,10 +282,10 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
 
   const { data: sources, error: sourcesError } = await db
     .from("sources")
-    .select("id, name, type, url_or_query, language, last_fetched_at, paywalled")
+    .select("id, name, type, url_or_query, language, last_fetched_at, paywalled, link_pattern")
     .eq("owner_id", env.OWNER_ID)
     .eq("active", true)
-    .in("type", ["rss", "sitemap", "api_openalex"]);
+    .in("type", ["rss", "sitemap", "scrape", "api_openalex"]);
   if (sourcesError) throw new Error(`Failed to load sources: ${sourcesError.message}`);
 
   // A source with no feed URL can never deliver: count it as failing so it

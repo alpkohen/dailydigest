@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanTitle, decodeEntities, parsePageMeta, parseRobotsDisallows, parseSitemap, selectRecent } from "../connectors/sitemap.js";
+import { parseSitemap, selectRecent } from "../connectors/sitemap.js";
+import { cleanTitle, decodeEntities, parsePageMeta, parseRobotsDisallows } from "../connectors/web.js";
 
 describe("parseSitemap", () => {
   it("reads child sitemaps from an index", () => {
@@ -40,7 +41,13 @@ describe("selectRecent", () => {
 describe("parsePageMeta", () => {
   it("prefers og tags and decodes entities", () => {
     const html = `<html><head><title>Site | Fallback</title><meta property="og:title" content="Iraq after US withdrawal &amp; regional balance"><meta name="description" content="Analysis of &#39;new&#39; security"></head></html>`;
-    expect(parsePageMeta(html)).toEqual({ title: "Iraq after US withdrawal & regional balance", description: "Analysis of 'new' security" });
+    expect(parsePageMeta(html)).toEqual({ title: "Iraq after US withdrawal & regional balance", description: "Analysis of 'new' security", publishedAt: null });
+  });
+
+  it("reads the publication date from article:published_time or JSON-LD", () => {
+    expect(parsePageMeta(`<meta property="article:published_time" content="2026-10-04T17:37:35Z" />`).publishedAt).toBe("2026-10-04T17:37:35Z");
+    expect(parsePageMeta(`<script>{"datePublished":"2026-10-02"}</script>`).publishedAt).toBe("2026-10-02");
+    expect(parsePageMeta(`<meta property="article:published_time" content="not a date" />`).publishedAt).toBeNull();
   });
 
   it("falls back to <title>", () => {

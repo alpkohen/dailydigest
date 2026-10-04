@@ -74,6 +74,8 @@ export const sourceSeedSchema = z.object({
   paywalled: z.boolean().optional(),
   url: z.string().nullable().optional(),
   issn: z.string().optional(),
+  /** For type "scrape": regex over the path of article links on the listing page. */
+  link_pattern: z.string().optional(),
 });
 
 export const sourcesSeedConfigSchema = z.object({
