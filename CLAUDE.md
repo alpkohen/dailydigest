@@ -30,8 +30,9 @@ Read `SPEC.md` before any task. It is the source of truth for scope, data model,
 1. Never hardcode model names, prices or thresholds. They live in `/config/*.yaml`.
 2. Every LLM call goes through `/packages/llm`, returns JSON validated with Zod, and is logged to `llm_calls` with tokens and cost.
 3. Every pipeline stage is idempotent and resumable. Re-running a stage for the same day must not duplicate rows or emails.
-4. Pipeline stages work in batches through the `jobs` table. No single step may assume it can process everything in one call.
-5. Store embeddings for every item from day one, even before features use them.
+4. Pipeline stages work in batches (bounded LLM batch sizes, paged reads, chunked writes). No single step may assume it can process everything in one call. The daily path is ingest → match → group → compose_brief → deliver (2026-10-04 rebuild); do not reintroduce per-item full-text extraction, per-item × per-topic LLM scoring, or the `jobs` queue on that path.
+5. Never drop an article silently: items are stored with feed metadata only, matched by keyword OR one batched AI call, and unmatched items stay searchable until retention. Embeddings are optional, not required for every item.
+5a. Only one AI coding agent works on this repo at a time. Test pipeline changes locally (`pnpm worker:run`) before relying on scheduled CI runs.
 6. Respect paywalls and robots.txt. Store extracted text privately for analysis only; the UI and emails show our own summary plus a link to the original.
 7. Migrations only via `/packages/db/migrations`. Never edit the database by hand.
 8. Every table has `owner_id` and RLS, even though there is one user today.

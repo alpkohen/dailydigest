@@ -5,12 +5,30 @@ import { fetchGdeltArticles } from "../connectors/gdelt.js";
 import { fetchOpenAlexWorksByIssn } from "../connectors/openalex.js";
 import { fetchRssFeed } from "../connectors/rss.js";
 import type { Env } from "../env.js";
-import { claimJobs, completeJob, enqueueJobs, failJob, type JobRow } from "../jobs.js";
 import { canonicalizeUrl } from "../lib/canonicalUrl.js";
 
-const CLAIM_BATCH_SIZE = 10;
 const OPENALEX_INITIAL_LOOKBACK_DAYS = 90;
 const OPENALEX_OVERLAP_DAYS = 3;
+const SOURCE_TIMEOUT_MS = 45_000;
+// A feed only exposes its latest N entries. If every entry in a fetch is
+// new and there are this many, older ones may have scrolled off the feed
+// since the last run: flagged so the owner can see a possible gap.
+const GAP_SUSPECT_MIN_ITEMS = 20;
+// A feed that answers but whose newest entry is this old has quietly stopped
+// updating (seen live: CSIS's feed still serves 2016 posts). Reported as
+// degraded rather than ok, so it shows up as a coverage problem.
+const STALE_FEED_DAYS = 21;
+
+function isStale(items: ItemInput[]): boolean {
+  if (items.length === 0) return true;
+  const newest = items
+    .map((i) => (i.publishedAt ? Date.parse(i.publishedAt) : NaN))
+    .filter((t) => Number.isFinite(t))
+    .reduce((max, t) => Math.max(max, t), 0);
+  // Feeds without dates can't be judged stale.
+  if (newest === 0) return false;
+  return Date.now() - newest > STALE_FEED_DAYS * 24 * 60 * 60 * 1000;
+}
 
 interface SourceRow {
   id: string;
@@ -22,12 +40,17 @@ interface SourceRow {
   paywalled: boolean;
 }
 
-/**
- * SPEC.md section 6.1: "fetch window since last successful run plus
- * overlap". Academic journals publish rarely, so a same-day filter would
- * always return nothing — this falls back to a longer lookback window on
- * a source's first run.
- */
+interface ItemInput {
+  url: string;
+  title: string;
+  standfirst?: string | null;
+  author?: string | null;
+  publishedAt?: string | null;
+  language?: string | null;
+  paywalled?: boolean;
+  raw?: unknown;
+}
+
 function openAlexSinceDate(source: SourceRow): string {
   const base = source.last_fetched_at
     ? new Date(source.last_fetched_at)
@@ -36,15 +59,19 @@ function openAlexSinceDate(source: SourceRow): string {
   return base.toISOString().slice(0, 10);
 }
 
-async function recordSourceHealth(
-  db: SupabaseClient,
-  sourceId: string,
-  ok: boolean,
-): Promise<void> {
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function recordSourceHealth(db: SupabaseClient, sourceId: string, ok: boolean, stale = false): Promise<void> {
   if (ok) {
     await db
       .from("sources")
-      .update({ last_fetched_at: new Date().toISOString(), error_count: 0, health_status: "ok" })
+      .update({ last_fetched_at: new Date().toISOString(), error_count: 0, health_status: stale ? "degraded" : "ok" })
       .eq("id", sourceId);
     return;
   }
@@ -52,10 +79,7 @@ async function recordSourceHealth(
   const errorCount = (data?.error_count ?? 0) + 1;
   await db
     .from("sources")
-    .update({
-      error_count: errorCount,
-      health_status: errorCount >= 3 ? "broken" : "degraded",
-    })
+    .update({ error_count: errorCount, health_status: errorCount >= 3 ? "broken" : "degraded" })
     .eq("id", sourceId);
 }
 
@@ -63,20 +87,11 @@ async function insertItems(
   db: SupabaseClient,
   ownerId: string,
   sourceId: string,
-  rows: {
-    url: string;
-    title: string;
-    standfirst?: string | null;
-    author?: string | null;
-    publishedAt?: string | null;
-    language?: string | null;
-    paywalled?: boolean;
-    raw?: unknown;
-  }[],
+  rows: ItemInput[],
   maxItems: number,
 ): Promise<{ id: string; canonical_url: string }[]> {
-  const capped = rows.slice(0, maxItems);
-  const payload = capped
+  const payload = rows
+    .slice(0, maxItems)
     .map((row) => {
       let canonicalUrl: string;
       try {
@@ -99,7 +114,7 @@ async function insertItems(
         status: "new",
       };
     })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+    .filter((row): row is NonNullable<typeof row> => row !== null && Boolean(row.title));
 
   if (payload.length === 0) return [];
 
@@ -111,41 +126,25 @@ async function insertItems(
   return data ?? [];
 }
 
-async function processRssJob(db: SupabaseClient, env: Env, limits: LimitsConfig, source: SourceRow) {
-  if (!source.url_or_query) {
-    console.warn(`ingest: source "${source.name}" has no feed url yet, skipping`);
-    return;
-  }
-  const items = await fetchRssFeed(source.url_or_query);
-  await insertItems(
-    db,
-    env.OWNER_ID,
-    source.id,
-    items.map((item) => ({
-      url: item.url,
-      title: item.title,
-      standfirst: item.standfirst,
-      author: item.author,
-      publishedAt: item.publishedAt,
-      language: source.language,
-      paywalled: source.paywalled,
-    })),
-    limits.max_items_per_source_per_run,
-  );
-  await recordSourceHealth(db, source.id, true);
-}
-
-async function processOpenAlexJob(db: SupabaseClient, env: Env, limits: LimitsConfig, source: SourceRow) {
-  if (!source.url_or_query) {
-    console.warn(`ingest: openalex source "${source.name}" has no issn yet, skipping`);
-    return;
+async function fetchSource(source: SourceRow): Promise<{ items: ItemInput[]; research?: Awaited<ReturnType<typeof fetchOpenAlexWorksByIssn>> }> {
+  if (!source.url_or_query) return { items: [] };
+  if (source.type === "rss") {
+    const items = await fetchRssFeed(source.url_or_query);
+    return {
+      items: items.map((item) => ({
+        url: item.url,
+        title: item.title,
+        standfirst: item.standfirst,
+        author: item.author,
+        publishedAt: item.publishedAt,
+        language: source.language,
+        paywalled: source.paywalled,
+      })),
+    };
   }
   const works = await fetchOpenAlexWorksByIssn(source.url_or_query, openAlexSinceDate(source));
-  const inserted = await insertItems(
-    db,
-    env.OWNER_ID,
-    source.id,
-    works.map((work) => ({
+  return {
+    items: works.map((work) => ({
       url: work.url,
       title: work.title,
       standfirst: work.abstract,
@@ -154,69 +153,54 @@ async function processOpenAlexJob(db: SupabaseClient, env: Env, limits: LimitsCo
       language: "en",
       raw: work,
     })),
-    limits.max_items_per_source_per_run,
-  );
+    research: works,
+  };
+}
 
-  if (inserted.length > 0) {
-    const byUrl = new Map(works.map((w) => [canonicalizeUrl(w.url), w]));
-    const researchRows = inserted
-      .map((row) => {
-        const work = byUrl.get(row.canonical_url);
-        if (!work) return null;
-        return {
-          owner_id: env.OWNER_ID,
-          item_id: row.id,
-          openalex_id: work.openalexId,
-          doi: work.doi,
-          journal: work.journal,
-          authors: work.authors,
-        };
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (researchRows.length > 0) {
-      const { error } = await db.from("research_items").upsert(researchRows, { onConflict: "item_id" });
-      if (error) throw new Error(`Failed to insert research_items: ${error.message}`);
+async function linkResearchItems(
+  db: SupabaseClient,
+  ownerId: string,
+  inserted: { id: string; canonical_url: string }[],
+  works: Awaited<ReturnType<typeof fetchOpenAlexWorksByIssn>>,
+): Promise<void> {
+  const byUrl = new Map(works.map((w) => [canonicalizeUrl(w.url), w]));
+  const rows = inserted
+    .map((row) => {
+      const work = byUrl.get(row.canonical_url);
+      if (!work) return null;
+      return {
+        owner_id: ownerId,
+        item_id: row.id,
+        openalex_id: work.openalexId,
+        doi: work.doi,
+        journal: work.journal,
+        authors: work.authors,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  if (rows.length === 0) return;
+  const { error } = await db.from("research_items").upsert(rows, { onConflict: "item_id" });
+  if (error) throw new Error(`Failed to insert research_items: ${error.message}`);
+}
+
+/** Runs `fn` over `items` with at most `limit` in flight at once. */
+async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++]!;
+      await fn(item);
     }
-  }
-  await recordSourceHealth(db, source.id, true);
+  });
+  await Promise.all(workers);
 }
 
-async function processGdeltJob(db: SupabaseClient, env: Env, limits: LimitsConfig, sourceId: string, query: string) {
-  const articles = await fetchGdeltArticles(query);
-  await insertItems(
-    db,
-    env.OWNER_ID,
-    sourceId,
-    articles.map((article) => ({
-      url: article.url,
-      title: article.title,
-      publishedAt: article.publishedAt,
-      language: article.language,
-    })),
-    limits.max_items_per_source_per_run,
-  );
-}
-
-async function processExaJob(db: SupabaseClient, env: Env, limits: LimitsConfig, sourceId: string, query: string) {
-  if (!env.EXA_API_KEY) {
-    console.warn("ingest: EXA_API_KEY not set, skipping exa job");
-    return;
-  }
-  const results = await fetchExaResults(env.EXA_API_KEY, query);
-  await insertItems(
-    db,
-    env.OWNER_ID,
-    sourceId,
-    results.map((result) => ({
-      url: result.url,
-      title: result.title,
-      author: result.author,
-      publishedAt: result.publishedAt,
-    })),
-    limits.max_items_per_source_per_run,
-  );
-}
-
+/**
+ * Ingest: fetch every active configured source (RSS feeds and OpenAlex
+ * journals), store each entry's feed metadata, and record per-source health.
+ * No job queue: sources are fetched directly with bounded concurrency and a
+ * per-source timeout, so one slow or dead source can't stall the run.
+ */
 export async function runIngestStage(env: Env, limits: LimitsConfig, date: string): Promise<void> {
   const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -232,88 +216,99 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
     .select("id, name, type, url_or_query, language, last_fetched_at, paywalled")
     .eq("owner_id", env.OWNER_ID)
     .eq("active", true)
-    .in("type", ["rss", "api_openalex", "api_exa", "api_gdelt"]);
+    .in("type", ["rss", "api_openalex"]);
   if (sourcesError) throw new Error(`Failed to load sources: ${sourcesError.message}`);
 
-  const { data: topics, error: topicsError } = await db
-    .from("topics")
-    .select("id, queries_tr, queries_en")
-    .eq("owner_id", env.OWNER_ID)
-    .eq("active", true);
-  if (topicsError) throw new Error(`Failed to load topics: ${topicsError.message}`);
-
-  const rssAndOpenAlexSources = (sources ?? []).filter((s) => s.type === "rss" || s.type === "api_openalex");
-  const gdeltSource = (sources ?? []).find((s) => s.type === "api_gdelt");
-  const exaSource = (sources ?? []).find((s) => s.type === "api_exa");
-
-  const payloads: Record<string, unknown>[] = rssAndOpenAlexSources.map((s) => ({
-    kind: s.type,
-    sourceId: s.id,
-  }));
-
-  // SPEC.md section 4.1/4.5: a topic's drafted queries (both languages)
-  // are what drives the Exa/GDELT search expansion, not just one query.
-  for (const topic of topics ?? []) {
-    const queries = [
-      ...((topic.queries_tr as string[] | null) ?? []),
-      ...((topic.queries_en as string[] | null) ?? []),
-    ];
-    for (const query of new Set(queries)) {
-      if (gdeltSource) payloads.push({ kind: "gdelt", sourceId: gdeltSource.id, topicId: topic.id, query });
-      if (exaSource) payloads.push({ kind: "exa", sourceId: exaSource.id, topicId: topic.id, query });
-    }
+  // A source with no feed URL can never deliver: count it as failing so it
+  // shows in the health report instead of being silently skipped.
+  const unconfigured = ((sources ?? []) as SourceRow[]).filter((s) => !s.url_or_query);
+  for (const source of unconfigured) {
+    await db.from("sources").update({ health_status: "broken" }).eq("id", source.id);
   }
 
-  await enqueueJobs(db, { ownerId: env.OWNER_ID, runId: run.id, stage: "ingest", payloads });
+  let inserted = 0;
+  const failedSources: string[] = [];
+  const gapSuspects: string[] = [];
+  const staleSources: string[] = [];
 
-  const sourceById = new Map((sources ?? []).map((s) => [s.id, s as SourceRow]));
-  let processed = 0;
-  let failed = 0;
-
-  while (true) {
-    const jobs: JobRow[] = await claimJobs(db, { ownerId: env.OWNER_ID, stage: "ingest", limit: CLAIM_BATCH_SIZE });
-    if (jobs.length === 0) break;
-
-    for (const job of jobs) {
-      try {
-        const payload = job.payload as {
-          kind: string;
-          sourceId: string;
-          query?: string;
-        };
-        const source = sourceById.get(payload.sourceId);
-
-        if (payload.kind === "rss" && source) {
-          await processRssJob(db, env, limits, source);
-        } else if (payload.kind === "api_openalex" && source) {
-          await processOpenAlexJob(db, env, limits, source);
-        } else if (payload.kind === "gdelt" && payload.query) {
-          await processGdeltJob(db, env, limits, payload.sourceId, payload.query);
-        } else if (payload.kind === "exa" && payload.query) {
-          await processExaJob(db, env, limits, payload.sourceId, payload.query);
-        }
-
-        await completeJob(db, job.id);
-        processed++;
-      } catch (err) {
-        console.error(`ingest job ${job.id} failed:`, (err as Error).message);
-        if (job.payload && typeof job.payload === "object" && "sourceId" in job.payload) {
-          await recordSourceHealth(db, (job.payload as { sourceId: string }).sourceId, false).catch(() => {});
-        }
-        await failJob(db, job, err);
-        failed++;
+  const configured = ((sources ?? []) as SourceRow[]).filter((s) => s.url_or_query);
+  await mapWithConcurrency(configured, limits.pipeline.ingest_concurrency, async (source) => {
+    try {
+      const fetched = await withTimeout(fetchSource(source), SOURCE_TIMEOUT_MS, source.name);
+      const rows = await insertItems(db, env.OWNER_ID, source.id, fetched.items, limits.max_items_per_source_per_run);
+      if (fetched.research && rows.length > 0) await linkResearchItems(db, env.OWNER_ID, rows, fetched.research);
+      inserted += rows.length;
+      if (source.last_fetched_at && rows.length >= GAP_SUSPECT_MIN_ITEMS && rows.length === fetched.items.length) {
+        gapSuspects.push(source.name);
       }
+      // OpenAlex journals publish rarely; only feeds are judged stale.
+      const stale = source.type === "rss" && isStale(fetched.items);
+      if (stale) staleSources.push(source.name);
+      await recordSourceHealth(db, source.id, true, stale);
+    } catch (err) {
+      failedSources.push(source.name);
+      console.error(`ingest: ${source.name} failed: ${(err as Error).message}`);
+      await recordSourceHealth(db, source.id, false).catch(() => {});
     }
-  }
+  });
+
+  if (limits.pipeline.use_search_apis) await runSearchApiExpansion(db, env, limits);
 
   await db
     .from("pipeline_runs")
     .update({
       finished_at: new Date().toISOString(),
-      status: failed > 0 ? "partial" : "ok",
-      stats: { stage: "ingest", date, processed, failed },
+      status: failedSources.length > 0 ? "partial" : "ok",
+      stats: {
+        stage: "ingest",
+        date,
+        sources: sources?.length ?? 0,
+        inserted,
+        failed: failedSources.length,
+        failedSources,
+        gapSuspects,
+        staleSources,
+        unconfigured: unconfigured.map((s) => s.name),
+      },
     })
     .eq("id", run.id);
 
-  console.log(`ingest stage done: ${processed} jobs processed, ${failed} failed`);
+  console.log(
+    `ingest stage done: ${sources?.length ?? 0} sources, ${inserted} new items, ${failedSources.length} failed` +
+      (gapSuspects.length ? `, possible feed gaps: ${gapSuspects.join(", ")}` : ""),
+  );
+}
+
+/** Optional GDELT/Exa expansion by topic query (limits.yaml pipeline.use_search_apis). */
+async function runSearchApiExpansion(db: SupabaseClient, env: Env, limits: LimitsConfig): Promise<void> {
+  const { data: apiSources } = await db
+    .from("sources")
+    .select("id, type")
+    .eq("owner_id", env.OWNER_ID)
+    .eq("active", true)
+    .in("type", ["api_gdelt", "api_exa"]);
+  const { data: topics } = await db
+    .from("topics")
+    .select("queries_tr, queries_en")
+    .eq("owner_id", env.OWNER_ID)
+    .eq("active", true);
+
+  for (const topic of topics ?? []) {
+    const queries = new Set([...((topic.queries_tr as string[]) ?? []), ...((topic.queries_en as string[]) ?? [])]);
+    for (const query of queries) {
+      for (const source of apiSources ?? []) {
+        try {
+          const rows: ItemInput[] =
+            source.type === "api_gdelt"
+              ? (await fetchGdeltArticles(query)).map((a) => ({ url: a.url, title: a.title, publishedAt: a.publishedAt, language: a.language }))
+              : env.EXA_API_KEY
+                ? (await fetchExaResults(env.EXA_API_KEY, query)).map((r) => ({ url: r.url, title: r.title, author: r.author, publishedAt: r.publishedAt }))
+                : [];
+          await insertItems(db, env.OWNER_ID, source.id, rows, limits.max_items_per_source_per_run);
+        } catch (err) {
+          console.error(`ingest: ${source.type} "${query}" failed: ${(err as Error).message}`);
+        }
+      }
+    }
+  }
 }

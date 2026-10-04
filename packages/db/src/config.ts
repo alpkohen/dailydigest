@@ -30,6 +30,20 @@ export const limitsConfigSchema = z.object({
   daily_budget_usd: z.number().positive(),
   budget_warning_threshold_pct: z.number().min(0).max(100).default(80),
   max_items_per_source_per_run: z.number().int().positive(),
+  pipeline: z
+    .object({
+      ingest_concurrency: z.number().int().positive().default(8),
+      match_batch_size: z.number().int().positive().default(60),
+      group_batch_size: z.number().int().positive().default(20),
+      group_window_hours: z.number().int().positive().default(48),
+      topic_backfill_days: z.number().int().positive().default(7),
+      retention_unmatched_days: z.number().int().positive().default(90),
+      brief_section_caps: z
+        .object({ critical: z.number().int(), follow_up: z.number().int(), worth_reading: z.number().int() })
+        .default({ critical: 6, follow_up: 10, worth_reading: 10 }),
+      use_search_apis: z.boolean().default(false),
+    })
+    .default({}),
   thresholds: z.object({
     relevance_default: z.number().min(0).max(10),
     relevance_prefilter_cosine: z.number().min(-1).max(1),

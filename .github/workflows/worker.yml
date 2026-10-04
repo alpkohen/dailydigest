@@ -4,18 +4,13 @@ on:
   schedule:
     # 05:30 Europe/Istanbul (UTC+3, no DST) = 02:30 UTC. Owner-set fixed
     # delivery time; not read from profiles.brief_time (see Settings page).
-    # Runs the full pipeline in stage order (seed_sources, ingest, extract;
-    # more stages land as later milestones are built).
+    # Runs the daily pipeline: collect, then compose_brief, deliver and
+    # retention (worker/src/index.ts ALL_STAGE_ORDER).
     - cron: "30 2 * * *"
-    # Every 3 hours: runs every stage up to (not including) compose_brief/
-    # deliver (worker/src/index.ts's COLLECT_STAGE_ORDER). Those stages read
-    # and write by row status, never by date, so running them repeatedly
-    # through the day is just incremental work - whatever's new since the
-    # last pass. This is what the 02:30 run used to do cold, in one
-    # multi-hour batch (ingest alone routinely 30-40 min, relevance 45-60
-    # min): by delivery time most of it is already done, so 02:30 only has
-    # a few hours' stragglers left plus compose_brief/deliver.
-    - cron: "0 */3 * * *"
+    # Every 2 hours: collect (ingest, watch_ingest, match, group) so the app
+    # stays current through the day. Each run only handles what's new since
+    # the last one.
+    - cron: "15 */2 * * *"
   workflow_dispatch:
     inputs:
       stage:
@@ -44,17 +39,9 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    # Safety net alongside the new fetch timeout in packages/db/src/client.ts:
-    # GitHub's own default (360 minutes) let a hung run sit all morning with
-    # no email ever sent. 45 min turned out too tight for a real --all run:
-    # ingest alone (many slow/paywalled sources, no per-item cap) regularly
-    # takes 30-40 min on its own. 90 min then also turned out too tight -
-    # relevance alone (LLM call per item x topic) was observed live taking
-    # 30+ minutes for a small few-hundred-item subset, which scales to well
-    # over an hour on a normal 1500-3000 item day, before cluster/score/
-    # enrich/compose_brief/deliver even run. 180 min gives real headroom for
-    # a genuine full day while still well short of GitHub's own 360 min cap.
-    timeout-minutes: 180
+    # The simplified pipeline (feed metadata only, batched matching) runs in
+    # minutes; anything near this limit is a hang, not real work.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -91,7 +78,7 @@ jobs:
           WORKER_BACKGROUND_PAUSED: ${{ vars.WORKER_BACKGROUND_PAUSED }}
           LLM_RUN_BUDGET_USD: ${{ github.event.inputs.budget_usd || vars.LLM_RUN_BUDGET_USD }}
         run: |
-          if [ "${{ github.event.schedule }}" = "0 */3 * * *" ] || [ "${{ github.event.inputs.collect }}" = "true" ]; then
+          if [ "${{ github.event.schedule }}" = "15 */2 * * *" ] || [ "${{ github.event.inputs.collect }}" = "true" ]; then
             pnpm worker:run --collect
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.all }}" = "true" ]; then
             pnpm worker:run --all

@@ -20,6 +20,12 @@ export interface BriefContent {
   sections: { section: "critical" | "follow_up" | "worth_reading" | "new_research"; items: BriefSectionItem[] }[];
   outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string; url?: string } | null;
   watchlist?: { id: string; title: string; url: string; watchName: string }[];
+  /** Events per topic in the last 24h; the email is capped, the app isn't. */
+  topicCounts?: { name: string; stories: number }[];
+  totalStories?: number;
+  /** Which configured sources delivered data, so a silent gap is visible. */
+  sourceHealth?: { total: number; ok: number; failing: string[] };
+  appUrl?: string;
 }
 
 // Same brand palette as the web app (apps/web/app/globals.css), hardcoded
@@ -101,6 +107,18 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
 
           <Section style={{ margin: "12px 0 24px" }}>
             <Text style={{ fontSize: 14, lineHeight: "21px", color: COLORS.textDim, margin: 0 }}>{content.headline}</Text>
+            {content.topicCounts && content.topicCounts.length > 0 && (
+              <Text style={{ fontSize: 12, lineHeight: "18px", color: COLORS.textFaint, margin: "10px 0 0" }}>
+                {content.topicCounts.map((t) => `${t.name}: ${t.stories}`).join(" · ")}
+              </Text>
+            )}
+            {safeUrl(content.appUrl) && (
+              <Text style={{ fontSize: 12, margin: "8px 0 0" }}>
+                <a href={safeUrl(content.appUrl)} style={{ color: COLORS.accent, textDecoration: "none" }}>
+                  {content.totalStories != null ? `All ${content.totalStories} developments in the app →` : "Open the app →"}
+                </a>
+              </Text>
+            )}
           </Section>
 
           {content.sections
@@ -227,6 +245,13 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
               </Text>
               <Text style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>{content.outsideRadar.reason}</Text>
             </Section>
+          )}
+
+          {content.sourceHealth && (
+            <Text style={{ fontSize: 11, color: content.sourceHealth.failing.length ? COLORS.amber : COLORS.textFaint, marginTop: 24 }}>
+              Sources: {content.sourceHealth.ok} of {content.sourceHealth.total} delivered data.
+              {content.sourceHealth.failing.length > 0 && ` No data from: ${content.sourceHealth.failing.join(", ")}.`}
+            </Text>
           )}
 
           <Text style={{ fontSize: 11, color: COLORS.textFaint, marginTop: 28, textAlign: "center" }}>

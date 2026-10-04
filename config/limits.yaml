@@ -1,10 +1,34 @@
 # Budget, thresholds, alert caps. CLAUDE.md rule 1, SPEC.md section 13.
 # All values are starting points; tune once real volumes are observed (M1+).
 
-daily_budget_usd: 5.00
+# Hard daily cap on LLM spend, enforced by the worker from llm_calls. Once
+# reached, LLM steps stop for the day; ingest and keyword matching continue.
+daily_budget_usd: 2.00
 budget_warning_threshold_pct: 80
 
 max_items_per_source_per_run: 100
+
+# Simplified pipeline (ingest -> match -> group -> daily brief).
+pipeline:
+  ingest_concurrency: 8
+  match_batch_size: 60
+  # Small on purpose: at 60 the model's output (a Turkish title+summary per
+  # new event) overran the token limit and came back truncated.
+  group_batch_size: 20
+  # Events older than this stop accepting new articles.
+  group_window_hours: 48
+  # A newly created topic is matched against this many days of stored items.
+  topic_backfill_days: 7
+  # Unmatched items older than this are deleted (saved/watched ones kept).
+  retention_unmatched_days: 90
+  # Max stories per section in the daily email; the app shows everything.
+  brief_section_caps:
+    critical: 6
+    follow_up: 10
+    worth_reading: 10
+  # GDELT/Exa topic-query expansion: off. It produced most of the volume,
+  # failures and Exa cost, and isn't needed to cover the configured sources.
+  use_search_apis: false
 
 thresholds:
   relevance_default: 5.0
