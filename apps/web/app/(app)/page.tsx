@@ -1,7 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { TodayView } from "@/components/TodayView";
 import { loadTodayViewProps } from "./briefData";
-import { OWNER_FIRST_NAME } from "@/lib/ownerProfile";
+
+// The home page lists live data (the last 24 hours of events), so it must
+// not be served from a build-time cache.
+export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
   const supabase = await createServerSupabaseClient();
@@ -14,15 +17,6 @@ export default async function TodayPage() {
     .limit(1)
     .maybeSingle();
 
-  if (!brief) {
-    return (
-      <main>
-        <h1 className="greeting-title">Good morning, {OWNER_FIRST_NAME}.</h1>
-        <p className="empty">No brief has been generated yet.</p>
-      </main>
-    );
-  }
-
-  const props = await loadTodayViewProps(supabase, brief);
+  const props = await loadTodayViewProps(supabase, brief, { live: true });
   return <TodayView {...props} />;
 }

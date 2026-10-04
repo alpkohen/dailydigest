@@ -38,7 +38,17 @@ export class RunBudgetExceededError extends Error {
   }
 }
 
+// Set by the worker from the remaining daily budget (limits.yaml
+// daily_budget_usd minus today's llm_calls spend). Unlike the env var, 0 is
+// meaningful here: it blocks every call.
+let budgetOverrideUsd: number | null = null;
+
+export function setRunBudgetUsd(value: number): void {
+  budgetOverrideUsd = Math.max(0, value);
+}
+
 function runBudgetUsd(): number | null {
+  if (budgetOverrideUsd != null) return budgetOverrideUsd;
   const raw = process.env.LLM_RUN_BUDGET_USD;
   if (!raw) return null;
   const value = Number(raw);

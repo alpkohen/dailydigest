@@ -34,34 +34,53 @@ export interface TodayViewProps {
   savedItemIds: string[];
 }
 
-export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefRow): Promise<TodayViewProps> {
-  const { data: briefStories } = await supabase
+type StoryRecord = {
+  id: string;
+  title: string;
+  summary: string | null;
+  why_it_matters: string | null;
+  tier: number | null;
+  story_topics: { topics: { name: string } | null }[];
+};
+
+const STORY_FIELDS = "id, title, summary, why_it_matters, tier, story_topics(topics(name))";
+const SECTION_BY_TIER: Record<number, string> = { 1: "critical", 2: "follow_up", 3: "worth_reading" };
+const LIVE_WINDOW_HOURS = 24;
+
+async function loadBriefStories(supabase: SupabaseClient, briefId: string): Promise<{ section: string; story: StoryRecord }[]> {
+  const { data } = await supabase
     .from("brief_stories")
-    .select("section, position, stories(id, title, summary, why_it_matters, tier, story_topics(topics(name)))")
-    .eq("brief_id", brief.id)
+    .select(`section, position, stories(${STORY_FIELDS})`)
+    .eq("brief_id", briefId)
     .order("position");
+  return ((data ?? []) as unknown as { section: string; stories: StoryRecord | null }[])
+    .filter((r) => r.stories)
+    .map((r) => ({ section: r.section, story: r.stories! }));
+}
 
-  type BriefStoryRow = {
-    section: string;
-    stories: {
-      id: string;
-      title: string;
-      summary: string | null;
-      why_it_matters: string | null;
-      tier: number | null;
-      story_topics: { topics: { name: string } | null }[];
-    } | null;
-  };
+/** Every event touched in the last 24 hours, not just the ones the email picked. */
+async function loadLiveStories(supabase: SupabaseClient): Promise<{ section: string; story: StoryRecord }[]> {
+  const since = new Date(Date.now() - LIVE_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("stories")
+    .select(STORY_FIELDS)
+    .eq("status", "open")
+    .gte("last_updated_at", since)
+    .not("tier", "is", null)
+    .not("summary", "is", null)
+    .order("last_updated_at", { ascending: false })
+    .limit(1000);
+  return ((data ?? []) as unknown as StoryRecord[]).map((story) => ({ section: SECTION_BY_TIER[story.tier ?? 3] ?? "worth_reading", story }));
+}
 
-  const rows = ((briefStories ?? []) as unknown as BriefStoryRow[]).filter((r) => r.stories);
-  const storyIds = rows.map((r) => r.stories!.id);
-
+async function loadSourceCounts(supabase: SupabaseClient, storyIds: string[]) {
   const countsByStory = new Map<string, { sources: Set<string>; perspectives: Set<string> }>();
-  if (storyIds.length > 0) {
+  // Chunked: a long .in() list is sent in the request URL.
+  for (let i = 0; i < storyIds.length; i += 100) {
     const { data: storyItemRows } = await supabase
       .from("story_items")
       .select("story_id, items(sources(id, perspective_group_id))")
-      .in("story_id", storyIds);
+      .in("story_id", storyIds.slice(i, i + 100));
 
     type ItemRow = { story_id: string; items: { sources: { id: string; perspective_group_id: string | null } | null } | null };
     for (const row of (storyItemRows ?? []) as unknown as ItemRow[]) {
@@ -71,20 +90,38 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
       countsByStory.set(row.story_id, bucket);
     }
   }
+  return countsByStory;
+}
 
-  const stories: TodayStory[] = rows.map((row) => ({
-    id: row.stories!.id,
-    title: row.stories!.title,
-    summary: row.stories!.summary ?? "",
-    tier: row.stories!.tier ?? SECTION_TIER[row.section] ?? 3,
-    section: row.section,
-    topics: row.stories!.story_topics.map((st) => st.topics?.name).filter((n): n is string => Boolean(n)),
-    whyItMatters: row.stories!.why_it_matters,
-    sourceCount: countsByStory.get(row.stories!.id)?.sources.size,
-    perspectiveCount: countsByStory.get(row.stories!.id)?.perspectives.size,
+/**
+ * `brief` is the edition being viewed (or the latest one, for the home page).
+ * With `live`, the story list is every event of the last 24 hours instead of
+ * the brief's capped selection, so the app is always current between emails.
+ */
+export async function loadTodayViewProps(
+  supabase: SupabaseClient,
+  brief: BriefRow | null,
+  options: { live?: boolean } = {},
+): Promise<TodayViewProps> {
+  const rows = options.live || !brief ? await loadLiveStories(supabase) : await loadBriefStories(supabase, brief.id);
+  const countsByStory = await loadSourceCounts(supabase, rows.map((r) => r.story.id));
+
+  const stories: TodayStory[] = rows.map(({ section, story }) => ({
+    id: story.id,
+    title: story.title,
+    summary: story.summary ?? "",
+    tier: story.tier ?? SECTION_TIER[section] ?? 3,
+    section,
+    topics: story.story_topics.map((st) => st.topics?.name).filter((n): n is string => Boolean(n)),
+    whyItMatters: story.why_it_matters,
+    sourceCount: countsByStory.get(story.id)?.sources.size,
+    perspectiveCount: countsByStory.get(story.id)?.perspectives.size,
   }));
+  if (options.live) {
+    stories.sort((a, b) => a.tier - b.tier || (b.sourceCount ?? 0) - (a.sourceCount ?? 0));
+  }
 
-  const content = brief.content as BriefContent | null;
+  const content = (brief?.content ?? null) as BriefContent | null;
 
   const research: TodayResearchItem[] =
     content?.sections.find((s) => s.section === "new_research")?.items.map((i) => ({
@@ -152,9 +189,14 @@ export async function loadTodayViewProps(supabase: SupabaseClient, brief: BriefR
     savedItemIds = (savedRows ?? []).map((r: { item_id: string | null }) => r.item_id).filter((v: string | null): v is string => Boolean(v));
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+  const liveFallbackHeadline = `Son ${LIVE_WINDOW_HOURS} saatte ${stories.length} gelişme.`;
+
   return {
-    periodDate: brief.period_date,
-    headline: content?.headline ?? "",
+    // The live view is always today's edition; its framing paragraph is the
+    // latest brief's only if that brief is from today.
+    periodDate: options.live || !brief ? today : brief.period_date,
+    headline: options.live && brief?.period_date !== today ? liveFallbackHeadline : (content?.headline ?? liveFallbackHeadline),
     stories,
     research,
     outsideRadar,

@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@dailydigest/db";
+import { setRunBudgetUsd } from "@dailydigest/llm";
 import { loadWorkerConfig } from "./config.js";
 import { loadEnv, type Env } from "./env.js";
 import { runClusterStage } from "./stages/cluster.js";
@@ -10,8 +11,11 @@ import { runDeliverStage } from "./stages/deliver.js";
 import { runEmbedStage } from "./stages/embed.js";
 import { runEnrichStage } from "./stages/enrich.js";
 import { runExtractStage } from "./stages/extract.js";
+import { runGroupStage } from "./stages/group.js";
 import { runIngestStage } from "./stages/ingest.js";
 import { runLearnStage } from "./stages/learn.js";
+import { runMatchStage } from "./stages/match.js";
+import { runRetentionStage } from "./stages/retention.js";
 import { runPingStage } from "./stages/ping.js";
 import { runQuestionEvidenceStage } from "./stages/questionEvidence.js";
 import { runQuestionUpdateStage } from "./stages/questionUpdate.js";
@@ -29,6 +33,10 @@ const STAGES: Record<string, Stage> = {
   seed_sources: (env, config) => runSeedSourcesStage(env, config.sourcesSeed),
   ingest: (env, config, date) => runIngestStage(env, config.limits, date),
   watch_ingest: (env, config, date) => runWatchIngestStage(env, config.limits, date),
+  match: (env, config, date) => runMatchStage(env, config.models, config.limits, date),
+  group: (env, config, date) => runGroupStage(env, config.models, config.limits, date),
+  retention: (env, config) => runRetentionStage(env, config.limits),
+  // Previous pipeline's stages: no longer scheduled, kept runnable by name.
   extract: (env, _config, date) => runExtractStage(env, date),
   embed: (env, config, date) => runEmbedStage(env, config.models, date),
   dedup: (env, config, date) => runDedupStage(env, config.limits, date),
@@ -38,7 +46,7 @@ const STAGES: Record<string, Stage> = {
   enrich: (env, config, date) => runEnrichStage(env, config.models, date),
   research_summary: (env, config, date) => runResearchSummaryStage(env, config.models, date),
   question_evidence: (env, config, date) => runQuestionEvidenceStage(env, config.models, date),
-  compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, date),
+  compose_brief: (env, config, date) => runComposeBriefStage(env, config.models, config.limits, date),
   deliver: (env, _config, date) => runDeliverStage(env, date),
   learn: (env, _config, date) => runLearnStage(env, date),
   // Weekly, not part of --all (SPEC.md section 4.2; run by its own workflow).
@@ -55,43 +63,47 @@ const STAGES: Record<string, Stage> = {
   },
 };
 
-// Order matters for --all: sources before ingest, items before
-// extract/embed/dedup/relevance/cluster, stories before score/enrich,
-// enrich before question_evidence/compose_brief. create_topic,
-// create_question and question_update are one-off/weekly actions,
-// deliberately excluded from --all.
+// Collect: fetch sources, match new items to topics, group matched items
+// into events. Runs every few hours so the app stays current; each stage
+// works by row status, so a run only handles what's new since the last one.
+const COLLECT_STAGE_ORDER = ["ingest", "watch_ingest", "match", "group"];
+
+// Daily (--all): collect, then the brief and email, then cleanup.
+// create_topic, create_question and question_update are one-off/weekly
+// actions, deliberately excluded.
 const ALL_STAGE_ORDER = [
   "seed_sources",
   "learn",
-  "ingest",
-  "watch_ingest",
-  "extract",
-  "embed",
-  "dedup",
-  "relevance",
-  "cluster",
-  "score",
-  "enrich",
+  ...COLLECT_STAGE_ORDER,
   "research_summary",
-  "question_evidence",
   "compose_brief",
   "deliver",
+  "retention",
 ];
 
-// Every stage up to compose_brief/deliver reads and writes by row *status*
-// (e.g. items.status = "new"/"extracted"/"embedded", stories.status = "open"
-// with summary IS NULL), never by date - "date" on these is only a
-// pipeline_runs label. That makes them safe and idempotent to run several
-// times a day: each run just picks up whatever's newly available since the
-// last one. compose_brief/deliver are the only two stages actually bound to
-// a specific period_date, so they're excluded here and stay on the once-
-// daily schedule. Spreading the rest across the day (see worker.yml's
-// second cron) means the heavy, LLM-bound stages (ingest, relevance) are
-// mostly already done by delivery time instead of running cold in a single
-// multi-hour batch every morning - the cause of this pipeline regularly
-// taking 2-3+ hours and, on 2026-10-01, silently missing its scheduled run
-// window entirely.
-const COLLECT_STAGE_ORDER = ALL_STAGE_ORDER.slice(0, ALL_STAGE_ORDER.indexOf("compose_brief"));
+/**
+ * Daily LLM spend cap (limits.yaml daily_budget_usd), on top of any per-run
+ * LLM_RUN_BUDGET_USD: today's spend is read from llm_calls, and callLlm
+ * refuses further calls once the remainder is used up.
+ */
+async function applyDailyBudget(env: Env, dailyBudgetUsd: number): Promise<void> {
+  const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const startOfDay = `${today()}T00:00:00Z`;
+  const { data, error } = await db
+    .from("llm_calls")
+    .select("cost_usd")
+    .eq("owner_id", env.OWNER_ID)
+    .gte("created_at", startOfDay)
+    // PostgREST caps a select at 1000 rows; the pipeline makes well under
+    // 100 calls a day, so a cap-sized page is the whole day.
+    .limit(1000);
+  if (error) throw new Error(`Failed to read today's LLM spend: ${error.message}`);
+  const spent = (data ?? []).reduce((sum, row) => sum + Number(row.cost_usd ?? 0), 0);
+  const runCap = Number(process.env.LLM_RUN_BUDGET_USD);
+  const remaining = Math.max(0, dailyBudgetUsd - spent);
+  setRunBudgetUsd(Number.isFinite(runCap) && runCap > 0 ? Math.min(runCap, remaining) : remaining);
+  console.log(`LLM budget: USD ${spent.toFixed(2)} spent today of ${dailyBudgetUsd.toFixed(2)}, ${remaining.toFixed(2)} left`);
+}
 
 function parseArgs(argv: string[]) {
   const args = new Map<string, string>();
@@ -147,6 +159,7 @@ async function main() {
 
   const config = await loadWorkerConfig();
   await reclaimStuckRuns(env);
+  await applyDailyBudget(env, config.limits.daily_budget_usd);
 
   const stagesToRun = runAll ? ALL_STAGE_ORDER : runCollect ? COLLECT_STAGE_ORDER : [stage as string];
   for (const name of stagesToRun) {
