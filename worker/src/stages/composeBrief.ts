@@ -54,7 +54,7 @@ async function sourceHealth(env: Env, db: SupabaseClient) {
     .select("name, health_status")
     .eq("owner_id", env.OWNER_ID)
     .eq("active", true)
-    .in("type", ["rss", "sitemap", "api_openalex"]);
+    .in("type", ["rss", "sitemap", "scrape", "api_openalex"]);
   const rows = data ?? [];
   const failing = rows.filter((s) => s.health_status === "broken" || s.health_status === "degraded").map((s) => s.name as string);
   return { total: rows.length, ok: rows.length - failing.length, failing };

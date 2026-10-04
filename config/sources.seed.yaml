@@ -39,10 +39,10 @@ sources:
   - { name: "Independent Türkçe", type: rss, lang: tr, group: tr_foreign_public, weight: 0.6, url: "https://www.indyturk.com/rss.xml" }
 
   # Turkish think tanks
-  - { name: "EDAM", type: rss, lang: tr, group: academic, weight: 0.9, url: null } # 2026-10-04: no feed; sitemap's newest entry is from 2023
+  - { name: "EDAM", type: scrape, lang: tr, group: academic, weight: 0.9, url: "https://edam.org.tr/", link_pattern: "^/(blog|basinda-edam|dis-politika-ve-guvenlik|ekonomi-ve-enerji|siber-politikalar-ve-dijital-demokrasi|acik-kaynakli-istihbarat-ve-savunma-analizleri|ekonomika)/[^/]+$" } # 2026-10-04: no feed, sitemap stale since 2023 but the site is active; homepage lists latest posts (robots.txt allows all)
   - { name: "SETA", type: sitemap, lang: tr, group: tr_gov_aligned, weight: 0.8, url: "https://www.setav.org/sitemap/yayinlar" } # 2026-10-04: no RSS; robots.txt lists this publications sitemap and allows crawling
   - { name: "İstanbul Politikalar Merkezi (IPC)", type: sitemap, lang: tr, group: academic, weight: 0.9, url: "https://ipc.sabanciuniv.edu/sitemap.xml" } # 2026-10-04: no RSS; site sitemap (no robots.txt restrictions), publishes rarely
-  - { name: "TEPAV", type: rss, lang: tr, group: academic, weight: 0.8, url: null } # 2026-10-04: no feed; sitemap.xml returns HTTP 500
+  - { name: "TEPAV", type: scrape, lang: tr, group: academic, weight: 0.8, url: "https://www.tepav.org.tr/tr/yayin", link_pattern: "^/tr/yayin/s/\\d+$" } # 2026-10-04: no feed, sitemap returns 500; publications listing page (robots.txt allows)
   - { name: "ORSAM", type: sitemap, lang: tr, group: academic, weight: 0.8, url: "https://orsam.org.tr/sitemap.xml" } # 2026-10-04: RSS channel has no items; WordPress sitemap (robots.txt allows) lists current publications
   - { name: "Dış Politika Enstitüsü", type: rss, lang: tr, group: academic, weight: 0.7, url: "https://foreignpolicy.org.tr/feed/" }
   - { name: "Perspektif", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: "https://www.perspektif.online/feed/" }
@@ -64,6 +64,7 @@ sources:
   - { name: "OC Media (Caucasus)", type: rss, lang: en, group: regional, weight: 0.7, url: "https://oc-media.org/feed/" }
   - { name: "TASS English", type: rss, lang: en, group: other_state, weight: 0.4, url: "https://tass.com/rss/v2.xml" }
   - { name: "Global Times", type: rss, lang: en, group: other_state, weight: 0.4, url: null } # 2026-10-04: outbrain.xml stopped updating 2026-08-23; its sitemap lists only section pages
+  - { name: "CGTN", type: rss, lang: en, group: other_state, weight: 0.4, url: "https://www.cgtn.com/subscribe/rss/section/world.xml" } # 2026-10-04: added to keep Chinese state-media coverage while Global Times has no working feed
 
   # Magazines and analysis
   - { name: "Foreign Affairs", type: rss, lang: en, group: western, weight: 1.0, paywalled: true, url: "https://www.foreignaffairs.com/rss.xml" }
@@ -77,7 +78,7 @@ sources:
   - { name: "Carnegie Endowment", type: sitemap, lang: en, group: western, weight: 0.9, url: "https://carnegieendowment.org/sitemaps/research-index.xml" } # 2026-10-04: no feed; research sitemap from the robots.txt-listed index
   - { name: "Brookings", type: sitemap, lang: en, group: western, weight: 0.9, url: "https://www.brookings.edu/sitemap_index.xml" } # 2026-10-04: no working feed; robots.txt lists this sitemap index and allows crawling
   - { name: "Council on Foreign Relations", type: rss, lang: en, group: western, weight: 0.9, url: "https://feeds.cfr.org/publication" }
-  - { name: "CSIS", type: rss, lang: en, group: western, weight: 0.9, url: null } # 2026-10-04: rss.xml stopped updating in 2016; sitemap pages are ?page=N URLs, which robots.txt disallows (/*?)
+  - { name: "CSIS", type: scrape, lang: en, group: western, weight: 0.9, url: "https://www.csis.org/analysis", link_pattern: "^/analysis/[^/]+$" } # 2026-10-04: rss.xml dead since 2016; /analysis listing is allowed by robots.txt (only /*? is disallowed)
   - { name: "Atlantic Council", type: rss, lang: en, group: western, weight: 0.8, url: "https://www.atlanticcouncil.org/feed/" }
   - { name: "Chatham House", type: rss, lang: en, group: western, weight: 0.9, url: "https://www.chathamhouse.org/path/whatsnew.xml" } # verified 2026-09-27: 50 items; the site's own /rss-feeds page lists this and 3 narrower feeds
   - { name: "ECFR", type: sitemap, lang: en, group: western, weight: 0.9, url: "https://ecfr.eu/sitemap-post-type-post.xml" } # 2026-10-04: /feed/ is bot-walled but robots.txt lists sitemap.xml and allows crawling; this is its posts child
