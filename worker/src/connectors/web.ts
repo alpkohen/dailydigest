@@ -4,17 +4,22 @@
  * and page metadata from og:/meta tags.
  */
 
+import { gunzipSync } from "node:zlib";
+
 const USER_AGENT = "Mozilla/5.0 (dailydigest personal use)";
 const FETCH_TIMEOUT_MS = 20_000;
 export const MAX_PAGE_BYTES = 400_000;
 
-export async function fetchText(url: string, maxBytes: number): Promise<string> {
+export async function fetchText(url: string, maxBytes: number, timeoutMs = FETCH_TIMEOUT_MS): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": USER_AGENT } });
     if (!response.ok) throw new Error(`fetch failed: ${response.status} ${response.statusText}`);
-    const text = await response.text();
+    const body = Buffer.from(await response.arrayBuffer());
+    // .xml.gz sitemaps (e.g. RFE/RL) arrive as raw gzip, not as a
+    // Content-Encoding the fetch layer would undo for us.
+    const text = (body[0] === 0x1f && body[1] === 0x8b ? gunzipSync(body) : body).toString("utf-8");
     return text.length > maxBytes ? text.slice(0, maxBytes) : text;
   } finally {
     clearTimeout(timeout);
