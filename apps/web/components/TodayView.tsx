@@ -41,6 +41,8 @@ export interface TodayWatchlistItem {
   title: string;
   url: string;
   watchName: string;
+  /** The publication; briefs written before this field existed fall back to the URL's site. */
+  source?: string;
 }
 
 export interface TodayQuestionWidget {
@@ -83,6 +85,14 @@ function formatEdition(periodDate: string) {
 function estimateReadMinutes(stories: TodayStory[], research: TodayResearchItem[]) {
   const words = stories.reduce((n, s) => n + s.summary.split(/\s+/).length, 0) + research.reduce((n, r) => n + r.argument.split(/\s+/).length, 0);
   return Math.max(3, Math.round(words / 200));
+}
+
+function siteOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Unknown source";
+  }
 }
 
 // Istanbul time, the owner's clock, whatever the server's time zone.
@@ -436,7 +446,7 @@ export function TodayView({
                         <div className="row-title" style={{ fontSize: 13 }}>
                           {w.title}
                         </div>
-                        <div className="row-meta">{w.watchName}</div>
+                        <div className="row-meta">{w.source ?? siteOf(w.url)}</div>
                       </>
                     );
                     return watchUrl ? (
