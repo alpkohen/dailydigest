@@ -93,9 +93,18 @@ export const sourceSeedSchema = z.object({
   link_pattern: z.string().optional(),
 });
 
+/** A source we want but don't collect, with why and what could close the gap (shown on the Sources page). */
+export const notCollectedSchema = z.object({
+  name: z.string(),
+  reason: z.string(),
+  option: z.string(),
+});
+export type NotCollected = z.infer<typeof notCollectedSchema>;
+
 export const sourcesSeedConfigSchema = z.object({
   perspective_groups: z.array(perspectiveGroupSchema),
   sources: z.array(sourceSeedSchema),
+  not_collected: z.array(notCollectedSchema).default([]),
 });
 export type SourcesSeedConfig = z.infer<typeof sourcesSeedConfigSchema>;
 
