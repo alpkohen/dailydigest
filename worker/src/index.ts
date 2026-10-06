@@ -70,7 +70,8 @@ const STAGES: Record<string, Stage> = {
 // works by row status, so a run only handles what's new since the last one.
 // suggest_sources (topic-driven source suggestions) is last, so a failure
 // there can't hold up matching, grouping or the daily brief.
-const COLLECT_CORE = ["ingest", "watch_ingest", "match", "group"];
+const FETCH_STAGE_ORDER = ["ingest", "watch_ingest"];
+const COLLECT_CORE = [...FETCH_STAGE_ORDER, "match", "group"];
 const COLLECT_STAGE_ORDER = [...COLLECT_CORE, "suggest_sources"];
 
 // Daily (--all): collect, then the brief and email, then cleanup.
@@ -144,6 +145,26 @@ async function reclaimStuckRuns(env: Env): Promise<void> {
     .lt("started_at", cutoff);
 }
 
+// A cron run can start a little early or late; this much slack keeps a run
+// 5h50m after the last one from being skipped.
+const AI_INTERVAL_SLACK_MS = 30 * 60 * 1000;
+
+/** Whether the last match run started at least ai_interval_hours ago. */
+async function aiStagesDue(env: Env, intervalHours: number): Promise<boolean> {
+  const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await db
+    .from("pipeline_runs")
+    .select("started_at")
+    .eq("owner_id", env.OWNER_ID)
+    .eq("stats->>stage", "match")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  // Unsure: run them. A missed AI pass is worse than an extra one.
+  if (error || !data) return true;
+  return Date.now() - Date.parse(data.started_at) >= intervalHours * 3_600_000 - AI_INTERVAL_SLACK_MS;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const date = args.get("date") ?? today();
@@ -167,7 +188,11 @@ async function main() {
   await reclaimStuckRuns(env);
   await applyDailyBudget(env, config.limits.daily_budget_usd);
 
-  const stagesToRun = runAll ? ALL_STAGE_ORDER : runCollect ? COLLECT_STAGE_ORDER : [stage as string];
+  let stagesToRun = runAll ? ALL_STAGE_ORDER : runCollect ? COLLECT_STAGE_ORDER : [stage as string];
+  if (runCollect && !(await aiStagesDue(env, config.limits.pipeline.ai_interval_hours))) {
+    console.log(`collect: fetching only; AI stages run every ${config.limits.pipeline.ai_interval_hours}h`);
+    stagesToRun = FETCH_STAGE_ORDER;
+  }
   for (const name of stagesToRun) {
     const run = STAGES[name];
     if (!run) {

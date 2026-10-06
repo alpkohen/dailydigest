@@ -7,9 +7,9 @@ on:
     # Runs the daily pipeline: collect, then compose_brief, deliver and
     # retention (worker/src/index.ts ALL_STAGE_ORDER).
     - cron: "30 2 * * *"
-    # Every 2 hours: collect (ingest, watch_ingest, match, group) so the app
-    # stays current through the day. Each run only handles what's new since
-    # the last one.
+    # Every 2 hours: collect. Sources are fetched every time (some feeds hold
+    # only a few hours of articles); the AI stages (match, group,
+    # suggest_sources) run only every limits.yaml ai_interval_hours (6).
     - cron: "15 */2 * * *"
   workflow_dispatch:
     inputs:

@@ -29,6 +29,12 @@ pipeline:
   # GDELT/Exa topic-query expansion: off. It produced most of the volume,
   # failures and Exa cost, and isn't needed to cover the configured sources.
   use_search_apis: false
+  # Collect runs every 2 hours, but only fetch sources (no AI) unless the
+  # last match run started at least this long ago; then match, group and
+  # suggest_sources run too. Fetching stays every 2 hours because several
+  # feeds hold only 2 to 6 hours of articles (Cumhuriyet, Al Jazeera, FT,
+  # France 24, Karar ...), so a 6-hour gap would lose articles.
+  ai_interval_hours: 6
   # Coverage-gap warnings per topic (app and email). A topic is flagged when
   # fewer than min_sources sources or min_items items matched it within
   # window_days; a source that fed the topic within contributor_window_days
