@@ -42,6 +42,21 @@ export const limitsConfigSchema = z.object({
         .object({ critical: z.number().int(), follow_up: z.number().int(), worth_reading: z.number().int() })
         .default({ critical: 6, follow_up: 10, worth_reading: 10 }),
       use_search_apis: z.boolean().default(false),
+      coverage: z
+        .object({
+          window_days: z.number().int().positive(),
+          min_sources: z.number().int().nonnegative(),
+          min_items: z.number().int().nonnegative(),
+          contributor_window_days: z.number().int().positive(),
+        })
+        .default({ window_days: 7, min_sources: 3, min_items: 3, contributor_window_days: 30 }),
+      source_suggestions: z
+        .object({
+          max_per_topic: z.number().int().positive(),
+          fresh_days: z.number().int().positive(),
+          topics_per_run: z.number().int().positive(),
+        })
+        .default({ max_per_topic: 8, fresh_days: 14, topics_per_run: 3 }),
     })
     .default({}),
   thresholds: z.object({
@@ -78,9 +93,18 @@ export const sourceSeedSchema = z.object({
   link_pattern: z.string().optional(),
 });
 
+/** A source we want but don't collect, with why and what could close the gap (shown on the Sources page). */
+export const notCollectedSchema = z.object({
+  name: z.string(),
+  reason: z.string(),
+  option: z.string(),
+});
+export type NotCollected = z.infer<typeof notCollectedSchema>;
+
 export const sourcesSeedConfigSchema = z.object({
   perspective_groups: z.array(perspectiveGroupSchema),
   sources: z.array(sourceSeedSchema),
+  not_collected: z.array(notCollectedSchema).default([]),
 });
 export type SourcesSeedConfig = z.infer<typeof sourcesSeedConfigSchema>;
 

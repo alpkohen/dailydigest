@@ -16,6 +16,7 @@ import { runIngestStage } from "./stages/ingest.js";
 import { runLearnStage } from "./stages/learn.js";
 import { runMatchStage } from "./stages/match.js";
 import { runRetentionStage } from "./stages/retention.js";
+import { runSuggestSourcesStage } from "./stages/suggestSources.js";
 import { runPingStage } from "./stages/ping.js";
 import { runQuestionEvidenceStage } from "./stages/questionEvidence.js";
 import { runQuestionUpdateStage } from "./stages/questionUpdate.js";
@@ -36,6 +37,7 @@ const STAGES: Record<string, Stage> = {
   match: (env, config, date) => runMatchStage(env, config.models, config.limits, date),
   group: (env, config, date) => runGroupStage(env, config.models, config.limits, date),
   retention: (env, config) => runRetentionStage(env, config.limits),
+  suggest_sources: (env, config) => runSuggestSourcesStage(env, config.models, config.limits),
   // Previous pipeline's stages: no longer scheduled, kept runnable by name.
   extract: (env, _config, date) => runExtractStage(env, date),
   embed: (env, config, date) => runEmbedStage(env, config.models, date),
@@ -66,7 +68,10 @@ const STAGES: Record<string, Stage> = {
 // Collect: fetch sources, match new items to topics, group matched items
 // into events. Runs every few hours so the app stays current; each stage
 // works by row status, so a run only handles what's new since the last one.
-const COLLECT_STAGE_ORDER = ["ingest", "watch_ingest", "match", "group"];
+// suggest_sources (topic-driven source suggestions) is last, so a failure
+// there can't hold up matching, grouping or the daily brief.
+const COLLECT_CORE = ["ingest", "watch_ingest", "match", "group"];
+const COLLECT_STAGE_ORDER = [...COLLECT_CORE, "suggest_sources"];
 
 // Daily (--all): collect, then the brief and email, then cleanup.
 // create_topic, create_question and question_update are one-off/weekly
@@ -74,11 +79,12 @@ const COLLECT_STAGE_ORDER = ["ingest", "watch_ingest", "match", "group"];
 const ALL_STAGE_ORDER = [
   "seed_sources",
   "learn",
-  ...COLLECT_STAGE_ORDER,
+  ...COLLECT_CORE,
   "research_summary",
   "compose_brief",
   "deliver",
   "retention",
+  "suggest_sources",
 ];
 
 /**

@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // lib/config.ts reads /config/*.yaml at runtime; make sure the deployed
+  // server functions carry those files.
+  outputFileTracingIncludes: {
+    "/**": ["../../config/*.yaml"],
+  },
   webpack: (config) => {
     // packages/db, packages/llm and packages/email are source-only
     // workspace packages: their internal imports use the ".js" extension

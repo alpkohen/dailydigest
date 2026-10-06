@@ -150,3 +150,26 @@ sources:
   # Broad discovery (per topic queries, not fixed feeds)
   - { name: "Exa semantic search", type: api_exa, group: null, weight: 0.6 }
   - { name: "GDELT DOC API", type: api_gdelt, group: null, weight: 0.5 }
+
+# Sources we want but don't collect, listed on the app's Sources page so a
+# gap is never silent. Names match the sources above where the source is in
+# the system. Keep this up to date when a source is fixed or given up.
+not_collected:
+  - { name: "Reuters World", reason: "Its terms prohibit automated collection without written consent.", option: "Licence (Reuters Connect)" }
+  - { name: "AP International", reason: "Feeds and sitemaps sit behind a Cloudflare bot challenge.", option: "Licence or email newsletter" }
+  - { name: "AFP", reason: "No public feed or news sitemap.", option: "Licence" }
+  - { name: "Lawfare", reason: "Sitemap sits behind a Cloudflare bot challenge; no feed.", option: "Email newsletter" }
+  - { name: "IISS", reason: "Every feed returns 403, even to a real browser.", option: "Email newsletter" }
+  - { name: "Global Times", reason: "Feed stopped updating in August 2026; sitemap lists only section pages.", option: "CGTN added as a substitute" }
+  - { name: "T24", reason: "Site refuses automated connections.", option: "Email newsletter" }
+  - { name: "ORSAM", reason: "Blocks requests from GitHub's servers (403), where the collector runs.", option: "None found (no newsletter)" }
+  - { name: "EDAM", reason: "Blocks requests from GitHub's servers (403), where the collector runs.", option: "Email newsletter" }
+  - { name: "US State Department", reason: "Returns 403 to automated clients.", option: "Email updates" }
+  - { name: "RAND", reason: "Returns 403 to automated clients.", option: "Email newsletter" }
+  - { name: "Middle East Institute", reason: "Returns 403 to automated clients.", option: "Email newsletter" }
+  - { name: "Eurasianet", reason: "Returns 403 to automated clients.", option: "Email newsletter" }
+  - { name: "Wilson Center", reason: "robots.txt disallows its sitemap pages; its listings need JavaScript.", option: "Email newsletter" }
+  - { name: "UN News", reason: "robots.txt disallows its feeds and paged sitemaps.", option: "Email newsletter" }
+  - { name: "Washington Institute", reason: "No feed; its sitemap stopped updating in April 2026.", option: "Email newsletter" }
+  - { name: "Turkish Presidency (TCCB)", reason: "No feed or sitemap.", option: "None found" }
+  - { name: "CNN, VOA, NHK", reason: "Their public feeds are no longer updated.", option: "None for now; covered by other outlets" }

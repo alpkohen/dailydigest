@@ -117,6 +117,13 @@ async function collectEntries(url: string, sinceMs: number, depth: number, patte
   return nested.flat();
 }
 
+/** How many entries a sitemap lists within the window (no page fetches). */
+export async function countRecentSitemapEntries(sitemapUrl: string, sinceDays: number): Promise<number> {
+  const since = Date.now() - sinceDays * 24 * 60 * 60 * 1000;
+  const entries = await collectEntries(sitemapUrl, since, 0, null);
+  return new Set(entries.map((e) => e.url)).size;
+}
+
 /**
  * Fetches a source's recent sitemap entries. `isKnown` filters out URLs
  * already stored, so pages are only fetched once, for genuinely new entries.

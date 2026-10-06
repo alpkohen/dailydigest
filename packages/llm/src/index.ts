@@ -5,6 +5,7 @@ export * from "./prompts/ask.js";
 export * from "./prompts/briefCompose.js";
 export * from "./prompts/eventGroup.js";
 export * from "./prompts/topicMatch.js";
+export * from "./prompts/sourceSuggest.js";
 export * from "./prompts/outsideRadar.js";
 export * from "./prompts/questionEvidence.js";
 export * from "./prompts/questionUpdate.js";
