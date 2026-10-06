@@ -37,8 +37,8 @@ pipeline:
   ai_interval_hours: 6
   # Coverage-gap warnings per topic (app and email). A topic is flagged when
   # fewer than min_sources sources or min_items items matched it within
-  # window_days; a source that fed the topic within contributor_window_days
-  # and is now broken or degraded is flagged too.
+  # window_days. Failing sources are listed on the Sources page only.
+  # contributor_window_days is unused.
   coverage:
     window_days: 7
     min_sources: 3
