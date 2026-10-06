@@ -19,7 +19,7 @@ export interface BriefContent {
   headline: string;
   sections: { section: "critical" | "follow_up" | "worth_reading" | "new_research"; items: BriefSectionItem[] }[];
   outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string; url?: string } | null;
-  watchlist?: { id: string; title: string; url: string; watchName: string }[];
+  watchlist?: { id: string; title: string; url: string; watchName: string; source?: string }[];
   /** Events per topic in the last 24h; the email is capped, the app isn't. */
   topicCounts?: { name: string; stories: number }[];
   totalStories?: number;
@@ -211,7 +211,7 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                   ) : (
                     w.title
                   )}
-                  <span style={{ color: COLORS.textFaint, fontSize: 11 }}> — {w.watchName}</span>
+                  <span style={{ color: COLORS.textFaint, fontSize: 11 }}> · {w.source ?? w.watchName}</span>
                 </Text>
                 );
               })}

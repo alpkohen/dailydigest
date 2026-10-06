@@ -35,17 +35,35 @@ function storyUrl(env: Env, storyId: string): string {
   return `${env.WEB_APP_URL}/story/${storyId}`;
 }
 
+function hostLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Unknown source";
+  }
+}
+
 async function fetchWatchlistItems(env: Env, db: SupabaseClient, since: string) {
   const { data: rows } = await db
     .from("watch_items")
-    .select("created_at, watches(name), items(id, title, url)")
+    .select("created_at, watches(name), items(id, title, url, sources(name))")
     .eq("owner_id", env.OWNER_ID)
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(10);
-  return ((rows ?? []) as unknown as { watches: { name: string } | null; items: { id: string; title: string; url: string } | null }[])
+  type Row = { watches: { name: string } | null; items: { id: string; title: string; url: string; sources: { name: string } | null } | null };
+  return ((rows ?? []) as unknown as Row[])
     .filter((r) => r.items)
-    .map((r) => ({ id: r.items!.id, title: r.items!.title, url: r.items!.url, watchName: r.watches?.name ?? "?" }));
+    .map((r) => ({
+      id: r.items!.id,
+      title: r.items!.title,
+      url: r.items!.url,
+      watchName: r.watches?.name ?? "?",
+      // The publication, not the watch: a watch's search returns articles
+      // from any site, which read as the watched institution's own work
+      // when labelled with the watch name.
+      source: r.items!.sources?.name ?? hostLabel(r.items!.url),
+    }));
 }
 
 async function sourceHealth(env: Env, db: SupabaseClient) {
