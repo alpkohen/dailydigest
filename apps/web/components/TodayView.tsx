@@ -98,10 +98,9 @@ function siteOf(url: string): string {
 // Istanbul time, the owner's clock, whatever the server's time zone.
 function istanbulTime(iso: string): string {
   const d = new Date(iso);
+  const day = d.toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul", day: "numeric", month: "short" });
   const time = d.toLocaleTimeString("en-GB", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
-  const day = d.toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul" });
-  const today = new Date().toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul" });
-  return day === today ? time : `${d.toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul", day: "numeric", month: "short" })} ${time}`;
+  return `${day} ${time}`;
 }
 
 /** "New" for events created since the previous update, "Updated" for older events that gained articles. */
