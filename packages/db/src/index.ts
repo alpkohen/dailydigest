@@ -3,3 +3,4 @@ export * from "./config.js";
 export * from "./rateLimit.js";
 export * from "./signedLink.js";
 export * from "./urlSafety.js";
+export * from "./coverage.js";

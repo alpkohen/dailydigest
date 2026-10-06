@@ -25,6 +25,8 @@ export interface BriefContent {
   totalStories?: number;
   /** Which configured sources delivered data, so a silent gap is visible. */
   sourceHealth?: { total: number; ok: number; failing: string[] };
+  /** Topics with thin coverage or failing sources (layer 3 coverage warnings). */
+  coverageGaps?: { topic: string; warnings: string[] }[];
   appUrl?: string;
 }
 
@@ -244,6 +246,17 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
                 )}
               </Text>
               <Text style={{ fontSize: 13, color: COLORS.textDim, margin: 0 }}>{content.outsideRadar.reason}</Text>
+            </Section>
+          )}
+
+          {content.coverageGaps && content.coverageGaps.length > 0 && (
+            <Section style={{ marginTop: 24 }}>
+              <Text style={{ fontSize: 11, color: COLORS.amber, margin: "0 0 4px", fontWeight: 600 }}>Coverage gaps</Text>
+              {content.coverageGaps.map((g) => (
+                <Text key={g.topic} style={{ fontSize: 11, color: COLORS.textDim, margin: "0 0 4px" }}>
+                  {g.topic}: {g.warnings.join(" ")}
+                </Text>
+              ))}
             </Section>
           )}
 

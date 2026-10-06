@@ -1,4 +1,4 @@
-import { createServiceRoleClient, type LimitsConfig, type ModelsConfig } from "@dailydigest/db";
+import { createServiceRoleClient, loadTopicCoverage, type LimitsConfig, type ModelsConfig } from "@dailydigest/db";
 import { buildDailyOverviewPrompt, callLlm, dailyOverviewSchema } from "@dailydigest/llm";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Env } from "../env.js";
@@ -58,6 +58,17 @@ async function sourceHealth(env: Env, db: SupabaseClient) {
   const rows = data ?? [];
   const failing = rows.filter((s) => s.health_status === "broken" || s.health_status === "degraded").map((s) => s.name as string);
   return { total: rows.length, ok: rows.length - failing.length, failing };
+}
+
+// A coverage check that fails must not block the brief.
+async function coverageGaps(env: Env, db: SupabaseClient, limits: LimitsConfig) {
+  try {
+    const coverage = await loadTopicCoverage(db, limits.pipeline.coverage, env.OWNER_ID);
+    return coverage.filter((c) => c.warnings.length > 0).map((c) => ({ topic: c.topicName, warnings: c.warnings }));
+  } catch (err) {
+    console.error(`compose_brief: coverage check failed: ${(err as Error).message}`);
+    return [];
+  }
 }
 
 async function writeOverview(
@@ -189,6 +200,7 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, limit
     topicCounts: [...topicCounts.entries()].map(([name, count]) => ({ name, stories: count })).sort((a, b) => b.stories - a.stories),
     totalStories: stories.length,
     sourceHealth: await sourceHealth(env, db),
+    coverageGaps: await coverageGaps(env, db, limits),
     appUrl: env.WEB_APP_URL,
   };
 
