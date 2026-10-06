@@ -1,4 +1,5 @@
 import { loadSourcesSeed } from "@/lib/config";
+import { healthLabel } from "@/lib/healthLabel";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { SourceForm } from "./SourceForm";
 import { SourceRow } from "./SourceRow";
@@ -68,7 +69,7 @@ export default async function SourcesPage() {
             <div>
               <span className="row-title" style={{ marginRight: 8 }}>{g.name}</span>
               <span className={`badge ${g.status === "muted" || g.status === "not in system" ? "badge-neutral" : g.status === "degraded" ? "badge-critical" : "badge-danger"}`}>
-                {g.status}
+                {healthLabel(g.status)}
               </span>
               <div className="row-summary">{g.reason}</div>
               <div className="row-meta">Option: {g.option}</div>

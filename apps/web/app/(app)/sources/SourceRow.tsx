@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { healthLabel } from "@/lib/healthLabel";
 import { setSourceActiveAction } from "./actions";
 
 const HEALTH_BADGE: Record<string, string> = {
@@ -34,7 +35,7 @@ export function SourceRow({
     <div className="row-flex">
       <div>
         <span className="row-title" style={{ marginRight: 8 }}>{name}</span>
-        <span className={`badge ${HEALTH_BADGE[healthStatus] ?? "badge-neutral"}`}>{healthStatus}</span>
+        <span className={`badge ${HEALTH_BADGE[healthStatus] ?? "badge-neutral"}`}>{healthLabel(healthStatus)}</span>
         <div className="row-meta">
           {type} · weight {weight} {perspectiveGroup ? `· ${perspectiveGroup}` : ""}
         </div>
