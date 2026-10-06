@@ -222,31 +222,35 @@ async function loadItems(db: SupabaseClient, ownerId: string, statuses: string[]
  * written off as unrelated go back to 'scored' for grouping; ones already
  * grouped under another topic get this topic added to their story.
  */
-async function backfillTopic(ctx: MatchContext, topic: PreparedTopic, limits: LimitsConfig): Promise<void> {
+async function backfillTopics(ctx: MatchContext, pending: PreparedTopic[], limits: LimitsConfig): Promise<void> {
   const items = await loadItems(ctx.db, ctx.env.OWNER_ID, ["not_relevant", "scored", "grouped"], limits.pipeline.topic_backfill_days);
   let matched = 0;
   for (let i = 0; i < items.length; i += limits.pipeline.match_batch_size) {
     const batch = items.slice(i, i + limits.pipeline.match_batch_size);
-    const { matches } = await matchBatch(ctx, [topic], batch);
+    // All new topics in one pass: the same articles aren't sent to the AI
+    // once per topic (seen live: 9 new topics would have taken ~3 hours).
+    const { matches } = await matchBatch(ctx, pending, batch);
     await writeScores(ctx, matches);
     const ids = [...matches.keys()];
     matched += ids.length;
     if (ids.length === 0) continue;
 
     await ctx.db.from("items").update({ status: "scored" }).in("id", ids).eq("status", "not_relevant");
-    const { data: links } = await ctx.db.from("story_items").select("story_id").in("item_id", ids);
-    const storyIds = [...new Set((links ?? []).map((l) => l.story_id as string))];
-    if (storyIds.length > 0) {
-      await ctx.db
-        .from("story_topics")
-        .upsert(
-          storyIds.map((storyId) => ({ owner_id: ctx.env.OWNER_ID, story_id: storyId, topic_id: topic.id })),
-          { onConflict: "story_id,topic_id" },
-        );
-    }
+    // Articles already in an event: the event gets the new topics too.
+    const { data: links } = await ctx.db.from("story_items").select("story_id, item_id").in("item_id", ids);
+    const rows = (links ?? []).flatMap((l) =>
+      [...(matches.get(l.item_id as string)?.keys() ?? [])].map((topicId) => ({ owner_id: ctx.env.OWNER_ID, story_id: l.story_id as string, topic_id: topicId })),
+    );
+    if (rows.length > 0) await ctx.db.from("story_topics").upsert(rows, { onConflict: "story_id,topic_id" });
   }
-  await ctx.db.from("topics").update({ backfilled_at: new Date().toISOString() }).eq("id", topic.id);
-  console.log(`match: backfilled "${topic.name}" over ${items.length} items, ${matched} matched`);
+  await ctx.db
+    .from("topics")
+    .update({ backfilled_at: new Date().toISOString() })
+    .in(
+      "id",
+      pending.map((t) => t.id),
+    );
+  console.log(`match: backfilled ${pending.length} topic(s) over ${items.length} items, ${matched} matched`);
 }
 
 /**
@@ -285,9 +289,8 @@ export async function runMatchStage(env: Env, models: ModelsConfig, limits: Limi
     return;
   }
 
-  for (const topic of topics.filter((t) => !t.backfilled_at)) {
-    await backfillTopic(ctx, topic, limits);
-  }
+  const pending = topics.filter((t) => !t.backfilled_at);
+  if (pending.length > 0) await backfillTopics(ctx, pending, limits);
 
   const items = await loadItems(db, env.OWNER_ID, ["new"], MATCH_WINDOW_DAYS);
   let matchedCount = 0;
