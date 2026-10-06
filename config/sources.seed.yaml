@@ -124,6 +124,7 @@ sources:
   - { name: "Japan Times", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://www.japantimes.co.jp/feed/" }
   - { name: "The Hindu International", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://www.thehindu.com/news/international/feeder/default.rss" }
   - { name: "Yonhap", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://en.yna.co.kr/RSS/news.xml" }
+  - { name: "Kyodo News", type: sitemap, lang: en, group: asia_pacific, weight: 0.8, url: "https://english.kyodonews.net/sitemap.xml", link_pattern: "^/articles/-/" } # no RSS; news-sitemap.xml is disallowed by robots.txt, the yearly sitemaps (sitemap-YYYY.xml) are allowed
   - { name: "The Diplomat", type: rss, lang: en, group: asia_pacific, weight: 0.8, url: "https://thediplomat.com/feed/" }
   - { name: "Arab News", type: rss, lang: en, group: regional, weight: 0.7, url: "https://www.arabnews.com/rss.xml" }
   - { name: "Haaretz", type: rss, lang: en, group: regional, weight: 0.8, paywalled: true, url: "https://www.haaretz.com/srv/haaretz-latest-headlines" }
@@ -136,6 +137,11 @@ sources:
   - { name: "TC Dışişleri Açıklamaları", type: rss, lang: tr, group: official, weight: 1.0, url: "https://www.mfa.gov.tr/tr.rss.mfa?3fc6582e-a37b-40d1-847a-6914dc12fb60" }
   - { name: "TC Dışişleri Güncel Gelişmeler", type: rss, lang: tr, group: official, weight: 0.9, url: "https://www.mfa.gov.tr/tr.rss.mfa?978045a8-225a-487d-8fd8-8d371874e8ec" }
   - { name: "Kyiv Independent", type: rss, lang: en, group: regional, weight: 0.8, url: "https://kyivindependent.com/news-archive/rss/" }
+  - { name: "Times of Israel", type: sitemap, lang: en, group: regional, weight: 0.8, url: "https://www.timesofisrael.com/news-sitemap.xml" } # /feed/ is disallowed by robots.txt; robots.txt lists this news sitemap
+  - { name: "RFE/RL", type: sitemap, lang: en, group: western, weight: 0.8, url: "https://www.rferl.org/sitemap_8_news.xml.gz" } # /api/ feeds are disallowed by robots.txt; the robots.txt-listed index includes this news sitemap
+  - { name: "ISW", type: sitemap, lang: en, group: western, weight: 0.9, url: "https://understandingwar.org/sitemap_index.xml", link_pattern: "^/research/" } # RSS is bot-walled (403); robots.txt-listed sitemap carries the daily assessments; slow server (~40 s)
+  - { name: "White House", type: sitemap, lang: en, group: official, weight: 0.9, url: "https://www.whitehouse.gov/sitemap_index.xml", link_pattern: "^/(fact-sheets|releases|briefings-statements|presidential-actions|articles)/" }
+  - { name: "NATO", type: sitemap, lang: en, group: official, weight: 0.9, url: "https://www.nato.int/sitemap.xml", link_pattern: "^/en/news-and-events/(articles|events/media-advisories|events/transcripts|official-texts)/" } # RSS is bot-walled (403); the robots.txt-listed sitemap is sparse for new news, so coverage may be partial
   - { name: "Sözcü", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: "https://www.sozcu.com.tr/feeds-rss-category-gundem" }
   - { name: "Bianet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: "https://bianet.org/biamag.rss" }
   - { name: "Habertürk", type: rss, lang: tr, group: tr_mainstream, weight: 0.6, url: "https://www.haberturk.com/rss" }

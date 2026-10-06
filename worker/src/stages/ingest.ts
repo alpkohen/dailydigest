@@ -11,7 +11,9 @@ import { canonicalizeUrl } from "../lib/canonicalUrl.js";
 
 const OPENALEX_INITIAL_LOOKBACK_DAYS = 90;
 const OPENALEX_OVERLAP_DAYS = 3;
-const SOURCE_TIMEOUT_MS = 45_000;
+// Generous: sources are fetched in parallel, so one slow site (ISW's sitemap
+// takes ~40 s) only delays itself.
+const SOURCE_TIMEOUT_MS = 90_000;
 // A feed only exposes its latest N entries. If every entry in a fetch is
 // new and there are this many, older ones may have scrolled off the feed
 // since the last run: flagged so the owner can see a possible gap.
@@ -192,7 +194,7 @@ async function fetchSource(
     };
   }
   if (source.type === "sitemap") {
-    const items = await fetchSitemapItems(source.url_or_query, SITEMAP_WINDOW_DAYS, (urls) => knownUrls(db, ownerId, urls));
+    const items = await fetchSitemapItems(source.url_or_query, SITEMAP_WINDOW_DAYS, (urls) => knownUrls(db, ownerId, urls), 25, source.link_pattern);
     return {
       items: items.map((item) => ({
         url: item.url,

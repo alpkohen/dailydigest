@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSitemap, selectRecent } from "../connectors/sitemap.js";
+import { parseSitemap, pathDate, selectRecent } from "../connectors/sitemap.js";
 import { cleanTitle, decodeEntities, parsePageMeta, parseRobotsDisallows } from "../connectors/web.js";
 
 describe("parseSitemap", () => {
@@ -15,6 +15,24 @@ describe("parseSitemap", () => {
     const xml = `<urlset><url><loc>https://a.org/x?a=1&amp;b=2</loc><lastmod>2026-10-01</lastmod><news:news><news:publication_date>2026-10-03T09:00:00Z</news:publication_date><news:title><![CDATA[Merz arrives in Kyiv]]></news:title></news:news></url></urlset>`;
     const { entries } = parseSitemap(xml);
     expect(entries[0]).toEqual({ url: "https://a.org/x?a=1&b=2", date: "2026-10-03T09:00:00Z", title: "Merz arrives in Kyiv" });
+  });
+});
+
+describe("pathDate", () => {
+  it("reads a full date from the path", () => {
+    expect(pathDate("https://www.nato.int/en/news-and-events/articles/news/2021/06/14/nato-leaders-agree")).toBe("2021-06-14");
+  });
+
+  it("uses lastmod for month-only paths when it falls in that month", () => {
+    expect(pathDate("https://www.whitehouse.gov/fact-sheets/2026/10/x/", "2026-10-05T10:00:00Z")).toBe("2026-10-05T10:00:00Z");
+  });
+
+  it("dates a month-only path to its month when lastmod is later (an old page touched)", () => {
+    expect(pathDate("https://www.whitehouse.gov/releases/2025/03/x/", "2026-10-05T10:00:00Z")).toBe("2025-03-01");
+  });
+
+  it("returns null without a date in the path", () => {
+    expect(pathDate("https://www.timesofisrael.com/police-clash/")).toBeNull();
   });
 });
 

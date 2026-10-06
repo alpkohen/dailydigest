@@ -8,12 +8,15 @@
 import { cleanTitle, fetchText, isAllowed, MAX_PAGE_BYTES, parsePageMeta, tag } from "./web.js";
 
 const MAX_SITEMAP_BYTES = 10_000_000;
+// Some sitemaps are slow to serve (seen live: ISW's 730 KB posts sitemap
+// takes ~40 s).
+const SITEMAP_FETCH_TIMEOUT_MS = 60_000;
 const MAX_CHILD_SITEMAPS = 6;
 const UNDATED_ENTRY_CAP = 30;
 // Child sitemaps that list site furniture rather than publications
 // (seen live: Brookings' index mixes page/event/person/project sitemaps in
 // with its article ones, all with fresh lastmods).
-const NON_CONTENT_CHILD = /[/_-](page|event|events|person|people|author|authors|project|center|centre|collection|category|tag|taxonomy|video|videos|podcast|landing)s?[-_.\d]/i;
+const NON_CONTENT_CHILD = /[/_-](page|event|events|person|people|author|authors|project|center|centre|collection|category|tag|taxonomy|video|videos|podcast|landing|map|gallery)s?[-_.\d]/i;
 
 export interface SitemapEntry {
   url: string;
@@ -28,6 +31,30 @@ export interface WebItem {
   publishedAt: string | null;
 }
 
+/**
+ * A publication date embedded in the URL path (/2026/10/05/ or /2026/10/).
+ * Sitemaps' lastmod changes whenever an old page is touched (seen live: NATO
+ * lists its 2021 summit pages with October 2026 lastmods), so a path date,
+ * when present, is the better signal of when something was published.
+ */
+export function pathDate(url: string, lastmod: string | null = null): string | null {
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+  const m = /\/(20\d{2})\/(0[1-9]|1[0-2])(?:\/(0[1-9]|[12]\d|3[01]))?\//.exec(`${path}/`);
+  if (!m) return null;
+  if (m[3]) return `${m[1]}-${m[2]}-${m[3]}`;
+  // Month only (/2026/10/): too coarse to date the entry itself, but it
+  // still exposes an old page with a fresh lastmod. Trust a lastmod from
+  // that same month; otherwise the page is from the month in its path.
+  const month = `${m[1]}-${m[2]}`;
+  if (lastmod && lastmod.slice(0, 7) === month) return lastmod;
+  return `${month}-01`;
+}
+
 /** Parses a sitemap document: either child sitemaps (index) or url entries. */
 export function parseSitemap(xml: string): { children: SitemapEntry[]; entries: SitemapEntry[] } {
   const children = [...xml.matchAll(/<sitemap>([\s\S]*?)<\/sitemap>/gi)].map((m) => ({
@@ -35,11 +62,15 @@ export function parseSitemap(xml: string): { children: SitemapEntry[]; entries: 
     date: tag(m[1]!, "lastmod"),
     title: null,
   }));
-  const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/gi)].map((m) => ({
-    url: tag(m[1]!, "loc") ?? "",
-    date: tag(m[1]!, "news:publication_date") ?? tag(m[1]!, "lastmod"),
-    title: tag(m[1]!, "news:title"),
-  }));
+  const entries = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/gi)].map((m) => {
+    const url = tag(m[1]!, "loc") ?? "";
+    const lastmod = tag(m[1]!, "lastmod");
+    return {
+      url,
+      date: tag(m[1]!, "news:publication_date") ?? pathDate(url, lastmod) ?? lastmod,
+      title: tag(m[1]!, "news:title"),
+    };
+  });
   return { children: children.filter((c) => c.url), entries: entries.filter((e) => e.url) };
 }
 
@@ -62,10 +93,13 @@ export function selectRecent(entries: SitemapEntry[], sinceMs: number): SitemapE
   return [...dated, ...undated];
 }
 
-async function collectEntries(url: string, sinceMs: number, depth: number): Promise<SitemapEntry[]> {
+async function collectEntries(url: string, sinceMs: number, depth: number, pattern: RegExp | null): Promise<SitemapEntry[]> {
   if (!(await isAllowed(url))) throw new Error(`robots.txt disallows ${url}`);
-  const { children, entries } = parseSitemap(await fetchText(url, MAX_SITEMAP_BYTES));
-  if (children.length === 0) return selectRecent(entries, sinceMs);
+  const { children, entries } = parseSitemap(await fetchText(url, MAX_SITEMAP_BYTES, SITEMAP_FETCH_TIMEOUT_MS));
+  if (children.length === 0) {
+    const wanted = pattern ? entries.filter((e) => pattern.test(new URL(e.url).pathname)) : entries;
+    return selectRecent(wanted, sinceMs);
+  }
   if (depth >= 2) return [];
 
   // Content children with a recent lastmod, newest first; undated children
@@ -79,7 +113,7 @@ async function collectEntries(url: string, sinceMs: number, depth: number): Prom
   const pageNumber = (u: string) => Number(/(\d+)\.xml$/i.exec(u)?.[1] ?? 0);
   const undated = content.filter((c) => !c.date).sort((a, b) => pageNumber(b.url) - pageNumber(a.url));
   const picked = (recentChildren.length > 0 ? recentChildren : undated).slice(0, MAX_CHILD_SITEMAPS);
-  const nested = await Promise.all(picked.map((c) => collectEntries(c.url, sinceMs, depth + 1).catch(() => [])));
+  const nested = await Promise.all(picked.map((c) => collectEntries(c.url, sinceMs, depth + 1, pattern).catch(() => [])));
   return nested.flat();
 }
 
@@ -92,13 +126,16 @@ export async function fetchSitemapItems(
   sinceDays: number,
   isKnown: (urls: string[]) => Promise<Set<string>>,
   maxNewPages = 25,
+  // Optional regex over entry paths, for sitemaps that mix news with site
+  // furniture (NATO, White House).
+  linkPattern: string | null = null,
 ): Promise<WebItem[]> {
   // Floored to UTC midnight: many sitemaps give date-only lastmods
   // ("2026-10-01"), which parse as midnight and would otherwise fall just
   // outside a rolling window.
   const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
   since.setUTCHours(0, 0, 0, 0);
-  const entries = await collectEntries(sitemapUrl, since.getTime(), 0);
+  const entries = await collectEntries(sitemapUrl, since.getTime(), 0, linkPattern ? new RegExp(linkPattern) : null);
   const unique = [...new Map(entries.map((e) => [e.url, e])).values()];
   const known = await isKnown(unique.map((e) => e.url));
   const fresh = unique.filter((e) => !known.has(e.url)).slice(0, maxNewPages);
