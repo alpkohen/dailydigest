@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compileKeywords, matchesKeywords, normalizeText } from "../lib/keywordMatch.js";
+import { compileKeywords, expandKeyword, matchedKeywords, matchesKeywords, normalizeText } from "../lib/keywordMatch.js";
 
 describe("normalizeText", () => {
   it("folds Turkish dotted/dotless i and accents", () => {
@@ -38,5 +38,26 @@ describe("matchesKeywords", () => {
 
   it("matches nothing when there are no keywords", () => {
     expect(matchesKeywords(compileKeywords([], []), "Ukraine")).toBe(false);
+  });
+});
+
+describe("expandKeyword", () => {
+  it("splits bilingual pairs and abbreviations into separate terms", () => {
+    expect(expandKeyword("Türkiye / Turkey")).toEqual(["Türkiye", "Turkey"]);
+    expect(expandKeyword("European Union (EU) / Avrupa Birliği (AB)")).toEqual(["European Union", "EU", "Avrupa Birliği", "AB"]);
+    expect(expandKeyword("Recep Tayyip Erdoğan")).toEqual(["Recep Tayyip Erdoğan"]);
+  });
+
+  it("makes paired keywords match (they never did as one term)", () => {
+    const c = compileKeywords(["Customs Union / Gümrük Birliği"], []);
+    expect(matchesKeywords(c, "Gümrük Birliği'nin güncellenmesi gündemde")).toBe(true);
+  });
+});
+
+describe("matchedKeywords", () => {
+  it("names the keywords found, and none when an exclusion is present", () => {
+    const c = compileKeywords(["Ankara", "Brussels / Brüksel", "Gümrük Birliği"], ["futbol"]);
+    expect(matchedKeywords(c, "Ankara ile Brüksel arasında Gümrük Birliği görüşmesi")).toEqual(["Ankara", "Brüksel", "Gümrük Birliği"]);
+    expect(matchedKeywords(c, "Ankara futbol derbisi")).toEqual([]);
   });
 });
