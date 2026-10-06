@@ -1,6 +1,7 @@
 "use server";
 
 import { buildTopicDraftPrompt, callLlm, embedTexts, topicDraftSchema } from "@dailydigest/llm";
+import { assertPublicHttpUrl } from "@dailydigest/db";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actionResult";
 import { loadWebConfig } from "@/lib/config";
@@ -84,5 +85,63 @@ export async function deleteTopicAction(topicId: string): Promise<ActionResult> 
   const { error } = await supabase.from("topics").update({ active: false }).eq("id", topicId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/topics");
+  return { ok: true };
+}
+
+/**
+ * Layer 2: adds a checked suggestion as a followed source. Only suggestions
+ * whose feed or sitemap the worker found and read can be added.
+ */
+export async function addSuggestedSourceAction(suggestionId: string): Promise<ActionResult> {
+  const supabase = await createServerSupabaseClient();
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return { ok: false, error: "Not signed in." };
+
+  const { data: s, error } = await supabase
+    .from("topic_source_suggestions")
+    .select("id, topic_id, name, language, source_type, feed_url, status")
+    .eq("id", suggestionId)
+    .maybeSingle();
+  if (error || !s) return { ok: false, error: error?.message ?? "Suggestion not found." };
+  if (!s.feed_url || !s.source_type || (s.status !== "ok" && s.status !== "stale")) {
+    return { ok: false, error: "No working feed was found for this source." };
+  }
+  try {
+    await assertPublicHttpUrl(s.feed_url);
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+
+  const { error: insertError } = await supabase.from("sources").insert({
+    owner_id: userData.user.id,
+    name: s.name,
+    type: s.source_type,
+    url_or_query: s.feed_url,
+    language: s.language,
+    weight: 0.6,
+    active: true,
+  });
+  if (insertError && insertError.code !== "23505") return { ok: false, error: insertError.message };
+
+  await supabase.from("topic_source_suggestions").update({ status: "added" }).eq("id", s.id);
+  revalidatePath(`/topics/${s.topic_id}`);
+  revalidatePath("/sources");
+  return { ok: true };
+}
+
+export async function dismissSuggestionAction(suggestionId: string, topicId: string): Promise<ActionResult> {
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.from("topic_source_suggestions").update({ status: "dismissed" }).eq("id", suggestionId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/topics/${topicId}`);
+  return { ok: true };
+}
+
+/** Queues the topic for another suggestion round on the next collect run. */
+export async function requestMoreSourcesAction(topicId: string): Promise<ActionResult> {
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.from("topics").update({ sources_suggested_at: null }).eq("id", topicId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/topics/${topicId}`);
   return { ok: true };
 }

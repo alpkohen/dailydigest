@@ -29,6 +29,22 @@ pipeline:
   # GDELT/Exa topic-query expansion: off. It produced most of the volume,
   # failures and Exa cost, and isn't needed to cover the configured sources.
   use_search_apis: false
+  # Coverage-gap warnings per topic (app and email). A topic is flagged when
+  # fewer than min_sources sources or min_items items matched it within
+  # window_days; a source that fed the topic within contributor_window_days
+  # and is now broken or degraded is flagged too.
+  coverage:
+    window_days: 7
+    min_sources: 3
+    min_items: 3
+    contributor_window_days: 30
+  # Topic-driven source suggestions: up to max_per_topic candidates per
+  # topic, kept only if their feed or sitemap has an item within fresh_days.
+  # topics_per_run bounds the work (and LLM calls) of one run.
+  source_suggestions:
+    max_per_topic: 8
+    fresh_days: 14
+    topics_per_run: 3
 
 thresholds:
   relevance_default: 5.0
