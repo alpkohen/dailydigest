@@ -19,6 +19,13 @@ perspective_groups:
   - id: academic
     name: "Akademik"
 
+  - id: tr_mainstream
+    name: "TR ana akım"
+  - id: asia_pacific
+    name: "Asya-Pasifik"
+  - id: official
+    name: "Resmi kurumlar ve hükümetler"
+
 sources:
   # Turkish news
   - { name: "Anadolu Ajansı", type: rss, lang: tr, group: tr_gov_aligned, weight: 0.8, url: "https://www.aa.com.tr/tr/rss/default?cat=guncel" }
@@ -98,6 +105,41 @@ sources:
   - { name: "Turkish Studies", type: api_openalex, group: academic, weight: 0.9, issn: "1468-3849" }
   - { name: "Insight Turkey", type: api_openalex, group: academic, weight: 0.8, issn: "1302-177X" }
   - { name: "Perceptions", type: api_openalex, group: academic, weight: 0.8, issn: "1300-8641" }
+
+  # Global base layer (2026-10-06): topic-independent coverage, so any new
+  # topic (China, US-Canada, ...) has sources from day one. Each verified
+  # with scripts/candidateCheck.ts: feed parses, robots.txt allows, fresh.
+  - { name: "BBC World", type: rss, lang: en, group: western, weight: 0.9, url: "https://feeds.bbci.co.uk/news/world/rss.xml" }
+  - { name: "DW English", type: rss, lang: en, group: western, weight: 0.8, url: "https://rss.dw.com/rdf/rss-en-world" }
+  - { name: "France 24 English", type: rss, lang: en, group: western, weight: 0.8, url: "https://www.france24.com/en/rss" }
+  - { name: "Euronews English", type: rss, lang: en, group: western, weight: 0.7, url: "https://www.euronews.com/rss?level=theme&name=news" }
+  - { name: "CBC World", type: rss, lang: en, group: western, weight: 0.7, url: "https://www.cbc.ca/webfeed/rss/rss-world" }
+  - { name: "Washington Post World", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://feeds.washingtonpost.com/rss/world" }
+  - { name: "Wall Street Journal World", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://feeds.content.dowjones.io/public/rss/RSSWorldNews" }
+  - { name: "Bloomberg Politics", type: rss, lang: en, group: western, weight: 0.9, paywalled: true, url: "https://feeds.bloomberg.com/politics/news.rss" }
+  - { name: "El País English", type: rss, lang: en, group: western, weight: 0.7, url: "https://feeds.elpais.com/mrss-s/pages/ep/site/english.elpais.com/portada" }
+  - { name: "FAZ Politik", type: rss, lang: de, group: western, weight: 0.8, paywalled: true, url: "https://www.faz.net/rss/aktuell/politik/" }
+  - { name: "South China Morning Post", type: rss, lang: en, group: asia_pacific, weight: 0.8, url: "https://www.scmp.com/rss/91/feed" }
+  - { name: "Nikkei Asia", type: rss, lang: en, group: asia_pacific, weight: 0.8, paywalled: true, url: "https://asia.nikkei.com/rss/feed/nar" }
+  - { name: "Japan Times", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://www.japantimes.co.jp/feed/" }
+  - { name: "The Hindu International", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://www.thehindu.com/news/international/feeder/default.rss" }
+  - { name: "Yonhap", type: rss, lang: en, group: asia_pacific, weight: 0.7, url: "https://en.yna.co.kr/RSS/news.xml" }
+  - { name: "The Diplomat", type: rss, lang: en, group: asia_pacific, weight: 0.8, url: "https://thediplomat.com/feed/" }
+  - { name: "Arab News", type: rss, lang: en, group: regional, weight: 0.7, url: "https://www.arabnews.com/rss.xml" }
+  - { name: "Haaretz", type: rss, lang: en, group: regional, weight: 0.8, paywalled: true, url: "https://www.haaretz.com/srv/haaretz-latest-headlines" }
+  - { name: "Meduza English", type: rss, lang: en, group: regional, weight: 0.8, url: "https://meduza.io/rss/en/all" }
+  - { name: "The Moscow Times", type: rss, lang: en, group: regional, weight: 0.8, url: "https://www.themoscowtimes.com/rss/news" }
+  - { name: "EU Council", type: rss, lang: en, group: official, weight: 0.9, url: "https://www.consilium.europa.eu/en/rss/pressreleases.ashx" }
+  - { name: "European Commission", type: rss, lang: en, group: official, weight: 0.9, url: "https://ec.europa.eu/commission/presscorner/api/rss?language=en" }
+  - { name: "UK FCDO", type: rss, lang: en, group: official, weight: 0.8, url: "https://www.gov.uk/search/news-and-communications.atom?organisations%5B%5D=foreign-commonwealth-development-office" }
+  - { name: "Kremlin", type: rss, lang: en, group: official, weight: 0.8, url: "http://en.kremlin.ru/events/all/feed" }
+  - { name: "TC Dışişleri Açıklamaları", type: rss, lang: tr, group: official, weight: 1.0, url: "https://www.mfa.gov.tr/tr.rss.mfa?3fc6582e-a37b-40d1-847a-6914dc12fb60" }
+  - { name: "TC Dışişleri Güncel Gelişmeler", type: rss, lang: tr, group: official, weight: 0.9, url: "https://www.mfa.gov.tr/tr.rss.mfa?978045a8-225a-487d-8fd8-8d371874e8ec" }
+  - { name: "Kyiv Independent", type: rss, lang: en, group: regional, weight: 0.8, url: "https://kyivindependent.com/news-archive/rss/" }
+  - { name: "Sözcü", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.6, url: "https://www.sozcu.com.tr/feeds-rss-category-gundem" }
+  - { name: "Bianet", type: rss, lang: tr, group: tr_opposition_independent, weight: 0.7, url: "https://bianet.org/biamag.rss" }
+  - { name: "Habertürk", type: rss, lang: tr, group: tr_mainstream, weight: 0.6, url: "https://www.haberturk.com/rss" }
+  - { name: "NTV", type: rss, lang: tr, group: tr_mainstream, weight: 0.6, url: "https://www.ntv.com.tr/gundem.rss" }
 
   # Broad discovery (per topic queries, not fixed feeds)
   - { name: "Exa semantic search", type: api_exa, group: null, weight: 0.6 }

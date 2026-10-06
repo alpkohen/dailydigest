@@ -52,10 +52,18 @@ interface ItemInput {
   language?: string | null;
   paywalled?: boolean;
   raw?: unknown;
-  /** Defaults to "new". Older articles found on a web page are stored as
-   * already unmatched, so they're known and searchable but don't land in
-   * today's feed. */
-  status?: "new" | "not_relevant";
+}
+
+// Feeds, sitemaps and listing pages often carry weeks or months of history
+// (the TC MFA feeds hold 200 statements each). On a source's first run,
+// anything older than this is stored already unmatched: known and
+// searchable, but not pushed into today's feed as if it were news.
+const FRESH_DAYS = 7;
+
+export function initialStatus(publishedAt: string | null | undefined, nowMs: number): "new" | "not_relevant" {
+  if (!publishedAt) return "new";
+  const t = Date.parse(publishedAt);
+  return Number.isFinite(t) && t < nowMs - FRESH_DAYS * 24 * 60 * 60 * 1000 ? "not_relevant" : "new";
 }
 
 function openAlexSinceDate(source: SourceRow): string {
@@ -96,7 +104,11 @@ async function insertItems(
   sourceId: string,
   rows: ItemInput[],
   maxItems: number,
+  // Journals (OpenAlex) are exempt: articles appear online days or weeks
+  // after their publication date.
+  ageFilter = true,
 ): Promise<{ id: string; canonical_url: string }[]> {
+  const now = Date.now();
   const payload = rows
     .slice(0, maxItems)
     .map((row) => {
@@ -118,7 +130,7 @@ async function insertItems(
         language: row.language ?? null,
         paywalled: row.paywalled ?? false,
         raw: row.raw ?? null,
-        status: row.status ?? "new",
+        status: ageFilter ? initialStatus(row.publishedAt, now) : "new",
       };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null && Boolean(row.title));
@@ -134,9 +146,6 @@ async function insertItems(
 }
 
 const SITEMAP_WINDOW_DAYS = 3;
-// A listing page shows its latest N articles regardless of age; on a
-// source's first run, the older ones are stored as already unmatched.
-const LISTING_FRESH_DAYS = 7;
 
 /** Which of these URLs are already stored, so sitemap pages are fetched once. */
 async function knownUrls(db: SupabaseClient, ownerId: string, urls: string[]): Promise<Set<string>> {
@@ -171,7 +180,6 @@ async function fetchSource(
   if (source.type === "scrape") {
     if (!source.link_pattern) throw new Error("listing source has no link_pattern");
     const items = await fetchListingItems(source.url_or_query, source.link_pattern, (urls) => knownUrls(db, ownerId, urls));
-    const cutoff = Date.now() - LISTING_FRESH_DAYS * 24 * 60 * 60 * 1000;
     return {
       items: items.map((item) => ({
         url: item.url,
@@ -180,7 +188,6 @@ async function fetchSource(
         publishedAt: item.publishedAt,
         language: source.language,
         paywalled: source.paywalled,
-        status: item.publishedAt && Date.parse(item.publishedAt) < cutoff ? "not_relevant" : "new",
       })),
     };
   }
@@ -304,7 +311,7 @@ export async function runIngestStage(env: Env, limits: LimitsConfig, date: strin
   await mapWithConcurrency(configured, limits.pipeline.ingest_concurrency, async (source) => {
     try {
       const fetched = await withTimeout(fetchSource(db, env.OWNER_ID, source), SOURCE_TIMEOUT_MS, source.name);
-      const rows = await insertItems(db, env.OWNER_ID, source.id, fetched.items, limits.max_items_per_source_per_run);
+      const rows = await insertItems(db, env.OWNER_ID, source.id, fetched.items, limits.max_items_per_source_per_run, source.type !== "api_openalex");
       if (fetched.research && rows.length > 0) await linkResearchItems(db, env.OWNER_ID, rows, fetched.research);
       inserted += rows.length;
       // Sitemaps return only new entries by design, so "all new" is normal there.
