@@ -153,7 +153,9 @@ async function matchBatch(
       ownerId: ctx.env.OWNER_ID,
       runId: ctx.runId,
       stage: "match",
-      maxTokens: 2000,
+      // Room for every article × topic pick when many topics are matched at
+      // once (seen live: 8 new topics overran 2000 and came back truncated).
+      maxTokens: 6000,
     });
     const aiPicks = new Map<string, Set<string>>();
     for (const m of result.matches) {
