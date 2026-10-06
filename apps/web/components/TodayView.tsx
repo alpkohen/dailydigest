@@ -269,8 +269,8 @@ export function TodayView({
 
   const researchForTab = tab === "critical" || tab === "follow_up" ? [] : research;
 
-  const leadStory = (tab === "all" || tab === "critical") ? storiesForTab.find((s) => s.section === "critical") : undefined;
-  const restStories = leadStory ? storiesForTab.filter((s) => s.id !== leadStory.id) : storiesForTab;
+  // Every event in the same plain list; no featured lead card (owner's call).
+  const restStories = storiesForTab;
 
   const hasRail = Boolean(questionWidget) || Boolean(outsideRadar) || (watchlist && watchlist.length > 0);
   const readMinutes = estimateReadMinutes(stories, research);
@@ -340,34 +340,7 @@ export function TodayView({
             </section>
           )}
 
-          <div>
-            {leadStory && (
-              <div className="lead-card-v2">
-                <div className="feed-eyebrow critical">
-                  <span className="dot" />
-                  Critical{leadStory.topics[0] ? ` · ${leadStory.topics[0].toUpperCase()}` : ""}
-                  <FreshTag story={leadStory} freshSince={freshSince} />
-                </div>
-                <Link href={`/story/${leadStory.id}`} className="feed-headline lead">
-                  {leadStory.title}
-                </Link>
-                <p className="feed-desc" lang="tr">{leadStory.summary}</p>
-                {leadStory.whyItMatters && (
-                  <div className="callout">
-                    <div className="callout-label">Why it matters</div>
-                    <div className="callout-text" lang="tr">{leadStory.whyItMatters}</div>
-                  </div>
-                )}
-                <div className="feed-footer">
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <AiTag label="AI summary" />
-                    <span className="feed-meta">{sourceMeta(leadStory.sourceCount, leadStory.perspectiveCount) ?? leadStory.topics.join(", ")}</span>
-                  </span>
-                  <SaveStoryButton storyId={leadStory.id} initiallySaved={savedStorySet.has(leadStory.id)} />
-                </div>
-              </div>
-            )}
-
+          <div style={{ marginTop: 24 }}>
             {restStories.map((story) => (
               <div key={story.id} className="feed-item">
                 <div className={`feed-eyebrow${story.section === "critical" ? " critical" : story.section === "follow_up" ? " follow-up" : ""}`}>
@@ -407,7 +380,7 @@ export function TodayView({
               </div>
             ))}
 
-            {!leadStory && restStories.length === 0 && researchForTab.length === 0 && <p className="empty">Nothing to show for this filter.</p>}
+            {restStories.length === 0 && researchForTab.length === 0 && <p className="empty">Nothing to show for this filter.</p>}
           </div>
 
           <div className="end-marker">
