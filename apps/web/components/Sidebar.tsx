@@ -21,8 +21,6 @@ const MANAGEMENT_LINKS = [
   { href: "/settings", label: "Settings" },
 ];
 
-const MAX_VISIBLE_TOPICS = 5;
-
 export interface SidebarTopic {
   id: string;
   name: string;
@@ -32,8 +30,9 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-  const visibleTopics = topics.slice(0, MAX_VISIBLE_TOPICS);
-  const hiddenCount = topics.length - visibleTopics.length;
+  // Every topic is listed; the list takes the free height and scrolls if
+  // there are more than fit, keeping Manage and Brief AI at the bottom.
+  const visibleTopics = topics;
 
   const [menuOpen, setMenuOpen] = useState(false);
   // A route change (tapping a link) should close the mobile dropdown.
@@ -95,6 +94,7 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
         </Link>
       </nav>
 
+      <div className="sidebar-topics-fill">
       {visibleTopics.length > 0 && (
         <>
           <button
@@ -114,15 +114,11 @@ export function Sidebar({ topics, unreadCount }: { topics: SidebarTopic[]; unrea
                   {t.name}
                 </Link>
               ))}
-              {hiddenCount > 0 && (
-                <Link href="/topics" className="sidebar-topic-link" style={{ color: "var(--text-faint)" }}>
-                  +{hiddenCount} more · See all
-                </Link>
-              )}
             </div>
           )}
         </>
       )}
+      </div>
 
       <p className="sidebar-eyebrow">Manage</p>
       <div className="sidebar-topics">

@@ -1428,3 +1428,23 @@ a.feed-headline:hover {
   color: var(--text);
   text-decoration: underline;
 }
+
+/* Topics take the sidebar's free height (scrolling if needed), so Manage
+   and Brief AI sit together at the bottom. */
+.sidebar-topics-fill {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.sidebar-topics-fill + .sidebar-eyebrow {
+  margin-top: 12px;
+}
+.sidebar .sidebar-ask-link {
+  margin-top: 12px;
+}
+@media (max-width: 860px) {
+  .sidebar-topics-fill {
+    flex: none;
+    overflow: visible;
+  }
+}
