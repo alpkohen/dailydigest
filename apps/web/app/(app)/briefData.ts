@@ -1,3 +1,4 @@
+import { buildTopicLines, type TopicLine } from "@dailydigest/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   TodayOutsideRadar,
@@ -20,6 +21,7 @@ interface BriefContent {
   sections: { section: string; items: { id: string; title?: string; argument?: string; itemId?: string }[] }[];
   outsideRadar?: { title: string; reason: string; url?: string } | null;
   watchlist?: TodayWatchlistItem[];
+  topicLines?: TopicLine[];
 }
 
 export interface TodayViewProps {
@@ -32,6 +34,8 @@ export interface TodayViewProps {
   questionWidget: TodayQuestionWidget | null;
   savedStoryIds: string[];
   savedItemIds: string[];
+  /** One line per topic (live: from the current events; archive: as sent). */
+  topicLines: TopicLine[];
   /** When the AI last processed new articles (live view only). */
   lastUpdatedAt: string | null;
   /** Events created or updated after this are marked New / Updated. */
@@ -230,6 +234,9 @@ export async function loadTodayViewProps(
     questionWidget,
     savedStoryIds,
     savedItemIds,
+    topicLines: options.live
+      ? buildTopicLines(stories.map((s) => ({ id: s.id, title: s.title, tier: s.tier, sourceCount: s.sourceCount ?? 0, topics: s.topics })))
+      : (content?.topicLines ?? []),
     ...updateTimes,
   };
 }

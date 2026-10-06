@@ -220,6 +220,7 @@ export function TodayView({
   savedItemIds,
   lastUpdatedAt = null,
   freshSince = null,
+  topicLines = [],
 }: {
   periodDate: string;
   headline: string;
@@ -232,6 +233,7 @@ export function TodayView({
   savedItemIds: string[];
   lastUpdatedAt?: string | null;
   freshSince?: string | null;
+  topicLines?: { topic: string; storyId: string; title: string; events: number }[];
 }) {
   const [tab, setTab] = useState<TabKey>("all");
   // A time-of-day greeting ("Good evening") only makes sense for the brief
@@ -318,9 +320,23 @@ export function TodayView({
                   <IconFrame className="framing-icon" />
                   Today&apos;s Framing
                 </h2>
-                <AiTag label="AI-written" />
+                {topicLines.length === 0 && <AiTag label="AI-written" />}
               </div>
-              <p className="dek" lang="tr">{headline}</p>
+              {topicLines.length > 0 ? (
+                <ul className="topic-lines">
+                  {topicLines.map((l) => (
+                    <li key={l.topic}>
+                      <span className="topic-lines-topic">{l.topic}</span>
+                      <span className="topic-lines-count"> ({l.events})</span>:{" "}
+                      <Link href={`/story/${l.storyId}`} lang="tr">
+                        {l.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="dek" lang="tr">{headline}</p>
+              )}
             </section>
           )}
 

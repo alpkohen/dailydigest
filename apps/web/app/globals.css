@@ -1401,3 +1401,30 @@ a.feed-headline:hover {
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* Today's framing: one line per topic. */
+.topic-lines {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.topic-lines-topic {
+  color: var(--text);
+  font-weight: 600;
+}
+.topic-lines-count {
+  color: var(--text-faint);
+}
+.topic-lines a {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+.topic-lines a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}

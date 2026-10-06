@@ -20,6 +20,8 @@ export interface BriefContent {
   sections: { section: "critical" | "follow_up" | "worth_reading" | "new_research"; items: BriefSectionItem[] }[];
   outsideRadar?: { id: string; title: string; standfirst: string | null; reason: string; url?: string } | null;
   watchlist?: { id: string; title: string; url: string; watchName: string; source?: string }[];
+  /** One line per topic: its most important event (replaces the overview paragraph). */
+  topicLines?: { topic: string; title: string; events: number; url?: string }[];
   /** Events per topic in the last 24h; the email is capped, the app isn't. */
   topicCounts?: { name: string; stories: number }[];
   totalStories?: number;
@@ -108,8 +110,23 @@ export function DailyBrief({ content, dateLabel }: { content: BriefContent; date
           </Text>
 
           <Section style={{ margin: "12px 0 24px" }}>
-            <Text style={{ fontSize: 14, lineHeight: "21px", color: COLORS.textDim, margin: 0 }}>{content.headline}</Text>
-            {content.topicCounts && content.topicCounts.length > 0 && (
+            {content.topicLines && content.topicLines.length > 0 ? (
+              content.topicLines.map((l) => (
+                <Text key={l.topic} style={{ fontSize: 14, lineHeight: "21px", color: COLORS.textDim, margin: "0 0 6px" }}>
+                  <span style={{ color: COLORS.text, fontWeight: 600 }}>{l.topic}</span> ({l.events}):{" "}
+                  {safeUrl(l.url) ? (
+                    <a href={safeUrl(l.url)} style={{ color: COLORS.textDim }}>
+                      {l.title}
+                    </a>
+                  ) : (
+                    l.title
+                  )}
+                </Text>
+              ))
+            ) : (
+              <Text style={{ fontSize: 14, lineHeight: "21px", color: COLORS.textDim, margin: 0 }}>{content.headline}</Text>
+            )}
+            {!content.topicLines?.length && content.topicCounts && content.topicCounts.length > 0 && (
               <Text style={{ fontSize: 12, lineHeight: "18px", color: COLORS.textFaint, margin: "10px 0 0" }}>
                 {content.topicCounts.map((t) => `${t.name}: ${t.stories}`).join(" · ")}
               </Text>

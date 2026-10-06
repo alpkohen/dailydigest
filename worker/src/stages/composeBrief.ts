@@ -1,10 +1,8 @@
-import { createServiceRoleClient, loadTopicCoverage, type LimitsConfig, type ModelsConfig } from "@dailydigest/db";
-import { buildDailyOverviewPrompt, callLlm, dailyOverviewSchema } from "@dailydigest/llm";
+import { buildTopicLines, createServiceRoleClient, loadTopicCoverage, type LimitsConfig, type ModelsConfig } from "@dailydigest/db";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Env } from "../env.js";
 
 const LOOKBACK_HOURS = 24;
-const OVERVIEW_STORY_COUNT = 12;
 const SECTION_BY_TIER: Record<number, "critical" | "follow_up" | "worth_reading"> = {
   1: "critical",
   2: "follow_up",
@@ -89,42 +87,13 @@ async function coverageGaps(env: Env, db: SupabaseClient, limits: LimitsConfig) 
   }
 }
 
-async function writeOverview(
-  env: Env,
-  models: ModelsConfig,
-  db: SupabaseClient,
-  runId: string,
-  stories: { title: string; summary: string; topic: string | null; sourceCount: number }[],
-): Promise<string> {
-  const fallback = `Son 24 saatte ${stories.length} gelişme izlendi.`;
-  if (stories.length === 0) return "Son 24 saatte takip ettiğin konularda yeni bir gelişme yok.";
-  try {
-    const result = await callLlm({
-      role: "mid",
-      promptName: "daily_overview",
-      prompt: buildDailyOverviewPrompt({ stories: stories.slice(0, OVERVIEW_STORY_COUNT) }),
-      schema: dailyOverviewSchema,
-      modelsConfig: models,
-      apiKeys: { anthropic: env.ANTHROPIC_API_KEY, openai: env.OPENAI_API_KEY },
-      db,
-      ownerId: env.OWNER_ID,
-      runId,
-      stage: "compose_brief",
-      maxTokens: 600,
-    });
-    return result.overview.replace(/\s*[—–]\s*/g, ", ").trim() || fallback;
-  } catch (err) {
-    console.error(`compose_brief: overview failed, using fallback: ${(err as Error).message}`);
-    return fallback;
-  }
-}
 
 /**
  * Compose the daily brief from the last 24 hours of events: sections by
  * tier, most-covered first, capped for the email (the app lists everything).
  * The only LLM call is a short overview paragraph, with a plain fallback.
  */
-export async function runComposeBriefStage(env: Env, models: ModelsConfig, limits: LimitsConfig, date: string): Promise<void> {
+export async function runComposeBriefStage(env: Env, _models: ModelsConfig, limits: LimitsConfig, date: string): Promise<void> {
   const db = createServiceRoleClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
   // One daily brief per date: a rerun must not create a second one.
@@ -201,17 +170,18 @@ export async function runComposeBriefStage(env: Env, models: ModelsConfig, limit
   const topicCounts = new Map<string, number>();
   for (const s of stories) for (const t of s.topics) topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1);
 
-  const headline = await writeOverview(
-    env,
-    models,
-    db,
-    run.id,
-    stories.map((s) => ({ title: s.title, summary: s.summary, topic: s.topics[0] ?? null, sourceCount: s.sourceCount })),
-  );
+  // One line per topic from event titles (no model call), replacing the
+  // AI-written overview paragraph, which strung unrelated events together.
+  const topicLines = buildTopicLines(stories);
+  const headline =
+    stories.length === 0
+      ? "Son 24 saatte takip ettiğin konularda yeni bir gelişme yok."
+      : topicLines.slice(0, 3).map((l) => `${l.topic}: ${l.title}`).join(" · ");
   const watchlist = await fetchWatchlistItems(env, db, since);
 
   const content = {
     headline,
+    topicLines: topicLines.map((l) => ({ ...l, url: storyUrl(env, l.storyId) })),
     sections: [...sections, researchSection],
     outsideRadar: null,
     watchlist,
