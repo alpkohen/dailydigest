@@ -45,7 +45,7 @@ Read `SPEC.md` before any task. It is the source of truth for scope, data model,
 - Schedule: collect every 2 hours fetches sources only (no AI; some feeds hold just 2 to 6 hours of articles). AI stages (match, group, suggest_sources) run every `ai_interval_hours` (6). The daily run at 02:30 UTC does everything plus the brief and email.
 - Sources: RSS, sitemap (with optional `link_pattern`) and listing-page connectors. Respect robots.txt and site terms; never bypass Cloudflare or IP blocks (Reuters, AP, Lawfare, IISS, ISW, EDAM, ORSAM are blocked; the agreed route for them is an email-newsletter inbox, not built yet).
 - Topics: the owner or Evren adds topics in the app. `suggest_sources` proposes checked feeds per topic (topic page, Add / Dismiss); coverage-gap warnings show on the topics pages and in the email.
-- App shows "Updated <day time>" and New / Updated badges per event, and "Why it's here" (AI / keywords) on the event page. Watchlist items show their real publication.
+- App shows "Updated <day time>" and New / Updated badges per event, and "Why it's here" (AI / keywords) on the event page. The framing is one line per topic from event titles (no AI paragraph). No lead card and no side rail on the Today page; watch_ingest is off (its search results were mostly unrelated sites, Exa is paid).
 - Costs: daily LLM cap 2 USD (`limits.yaml`); typical spend is about 0.07 to 0.10 USD a day.
 - Production and local share one Supabase database: seed changes and scripts hit production immediately. The owner merges PRs; merging can close a PR stacked on the merged branch, so base new PRs on `main`.
 - Keep things simple: the owner prefers small, working changes over elaborate ones.

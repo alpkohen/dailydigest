@@ -272,7 +272,10 @@ export function TodayView({
   // Every event in the same plain list; no featured lead card (owner's call).
   const restStories = storiesForTab;
 
-  const hasRail = Boolean(questionWidget) || Boolean(outsideRadar) || (watchlist && watchlist.length > 0);
+  // The side rail (tracked question, outside radar, watchlist) is off: the
+  // question evidence stage isn't scheduled and the watchlist search
+  // returned mostly unrelated sites (owner's call, 2026-10-06).
+  const hasRail = false;
   const readMinutes = estimateReadMinutes(stories, research);
 
   return (

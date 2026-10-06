@@ -70,7 +70,9 @@ const STAGES: Record<string, Stage> = {
 // works by row status, so a run only handles what's new since the last one.
 // suggest_sources (topic-driven source suggestions) is last, so a failure
 // there can't hold up matching, grouping or the daily brief.
-const FETCH_STAGE_ORDER = ["ingest", "watch_ingest"];
+// watch_ingest (GDELT/Exa search per watch) is off: its results were
+// mostly unrelated sites and Exa is paid. The stage stays registered.
+const FETCH_STAGE_ORDER = ["ingest"];
 const COLLECT_CORE = [...FETCH_STAGE_ORDER, "match", "group"];
 const COLLECT_STAGE_ORDER = [...COLLECT_CORE, "suggest_sources"];
 
