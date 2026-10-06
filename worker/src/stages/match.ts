@@ -8,7 +8,7 @@ import {
 } from "@dailydigest/llm";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Env } from "../env.js";
-import { compileKeywords, matchesKeywords, type CompiledKeywords } from "../lib/keywordMatch.js";
+import { compileKeywords, matchedKeywords, type CompiledKeywords } from "../lib/keywordMatch.js";
 
 // Only fresh items are matched; anything older the previous pipeline left
 // behind was moved to 'not_relevant' by migration 0025 and stays searchable.
@@ -80,32 +80,64 @@ async function ensureKeywords(ctx: MatchContext, topic: TopicRow): Promise<Topic
   }
 }
 
+interface Match {
+  score: number;
+  reason: string;
+}
+type Matches = Map<string, Map<string, Match>>;
+
 /**
- * Matches one batch of items against the given topics: keyword OR AI.
- * Returns item id -> matched topic ids, plus whether the AI half succeeded
- * (when it didn't, unmatched items must stay pending for a retry rather than
- * be written off as unrelated).
+ * Matches one batch of items against the given topics. The AI call decides
+ * (it sees every item and is told to include when unsure); keyword hits are
+ * recorded as the reason alongside it. Keywords alone only count when the
+ * AI call fails, so a broad keyword ("Erdoğan", "Ankara") can't pull a
+ * domestic story into "Türkiye-AB" on its own (seen live, 2026-10-06).
+ * Returns item id -> topic id -> match, plus whether the AI half succeeded
+ * (when it didn't, unmatched items stay pending for a retry rather than be
+ * written off as unrelated).
  */
+export function combineMatches(
+  keywordHits: Map<string, Map<string, string[]>>,
+  aiPicks: Map<string, Set<string>> | null,
+): Matches {
+  const matches: Matches = new Map();
+  const set = (itemId: string, topicId: string, m: Match) => {
+    const byTopic = matches.get(itemId) ?? new Map<string, Match>();
+    byTopic.set(topicId, m);
+    matches.set(itemId, byTopic);
+  };
+  if (aiPicks) {
+    for (const [itemId, topicIds] of aiPicks) {
+      for (const topicId of topicIds) {
+        const words = keywordHits.get(itemId)?.get(topicId) ?? [];
+        set(itemId, topicId, words.length > 0 ? { score: KEYWORD_SCORE, reason: `ai; keywords: ${words.join(", ")}` } : { score: AI_SCORE, reason: "ai" });
+      }
+    }
+  } else {
+    for (const [itemId, byTopic] of keywordHits) {
+      for (const [topicId, words] of byTopic) set(itemId, topicId, { score: KEYWORD_SCORE, reason: `keywords (AI unavailable): ${words.join(", ")}` });
+    }
+  }
+  return matches;
+}
+
 async function matchBatch(
   ctx: MatchContext,
   topics: PreparedTopic[],
   items: ItemRow[],
-): Promise<{ matches: Map<string, Map<string, number>>; aiOk: boolean }> {
-  const matches = new Map<string, Map<string, number>>();
-  const add = (itemId: string, topicId: string, score: number) => {
-    const byTopic = matches.get(itemId) ?? new Map<string, number>();
-    byTopic.set(topicId, Math.max(byTopic.get(topicId) ?? 0, score));
-    matches.set(itemId, byTopic);
-  };
-
+): Promise<{ matches: Matches; aiOk: boolean }> {
+  const keywordHits = new Map<string, Map<string, string[]>>();
   for (const item of items) {
     const text = `${item.title} ${item.standfirst ?? ""}`;
     for (const topic of topics) {
-      if (matchesKeywords(topic.compiled, text)) add(item.id, topic.id, KEYWORD_SCORE);
+      const words = matchedKeywords(topic.compiled, text);
+      if (words.length === 0) continue;
+      const byTopic = keywordHits.get(item.id) ?? new Map<string, string[]>();
+      byTopic.set(topic.id, words);
+      keywordHits.set(item.id, byTopic);
     }
   }
 
-  let aiOk = true;
   try {
     const result = await callLlm({
       role: "fast",
@@ -123,30 +155,33 @@ async function matchBatch(
       stage: "match",
       maxTokens: 2000,
     });
+    const aiPicks = new Map<string, Set<string>>();
     for (const m of result.matches) {
       const item = items[m.i];
       if (!item) continue;
       for (const t of m.t) {
         const topic = topics[t];
-        if (topic) add(item.id, topic.id, AI_SCORE);
+        if (!topic) continue;
+        const picked = aiPicks.get(item.id) ?? new Set<string>();
+        picked.add(topic.id);
+        aiPicks.set(item.id, picked);
       }
     }
+    return { matches: combineMatches(keywordHits, aiPicks), aiOk: true };
   } catch (err) {
-    aiOk = false;
     console.error(`match: AI batch failed, keyword matches kept, rest retried next run: ${(err as Error).message}`);
+    return { matches: combineMatches(keywordHits, null), aiOk: false };
   }
-
-  return { matches, aiOk };
 }
 
-async function writeScores(ctx: MatchContext, matches: Map<string, Map<string, number>>): Promise<void> {
+async function writeScores(ctx: MatchContext, matches: Matches): Promise<void> {
   const rows = [...matches.entries()].flatMap(([itemId, byTopic]) =>
-    [...byTopic.entries()].map(([topicId, score]) => ({
+    [...byTopic.entries()].map(([topicId, m]) => ({
       owner_id: ctx.env.OWNER_ID,
       item_id: itemId,
       topic_id: topicId,
-      score,
-      reason: score === KEYWORD_SCORE ? "keyword" : "ai",
+      score: m.score,
+      reason: m.reason,
     })),
   );
   if (rows.length === 0) return;

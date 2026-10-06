@@ -31,6 +31,28 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
     .select("items(title, url, language, published_at, sources(name, perspective_groups(name)))")
     .eq("story_id", id);
 
+  // Why this event sits under each of its topics: how its articles were
+  // matched (AI, and which keywords it found).
+  const { data: scoreRows } = await supabase
+    .from("story_items")
+    .select("items(item_topic_scores(reason, topics(name)))")
+    .eq("story_id", id);
+  type ScoreRow = { items: { item_topic_scores: { reason: string | null; topics: { name: string } | null }[] } | null };
+  const whyByTopic = new Map<string, { articles: number; ai: number; keywords: Set<string> }>();
+  for (const row of (scoreRows ?? []) as unknown as ScoreRow[]) {
+    for (const sc of row.items?.item_topic_scores ?? []) {
+      if (!sc.topics) continue;
+      const why = whyByTopic.get(sc.topics.name) ?? { articles: 0, ai: 0, keywords: new Set<string>() };
+      why.articles++;
+      const reason = sc.reason ?? "";
+      if (reason.startsWith("ai")) why.ai++;
+      const kw = /keywords[^:]*:\s*(.+)$/.exec(reason)?.[1];
+      if (kw) for (const k of kw.split(",")) why.keywords.add(k.trim());
+      else if (reason === "keyword") why.keywords.add("(keyword match, earlier rule)");
+      whyByTopic.set(sc.topics.name, why);
+    }
+  }
+
   const items = ((storyItems ?? []) as unknown as StoryItemRow[]).map((row) => row.items).filter((i): i is NonNullable<StoryItemRow["items"]> => Boolean(i));
 
   const topics = (story.story_topics as unknown as { topics: { name: string } | null }[]).map((st) => st.topics?.name).filter((n): n is string => Boolean(n));
@@ -48,6 +70,16 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
       <h1 className="h1-serif" style={{ marginTop: 10 }}>{story.title}</h1>
 
       {topics.length > 0 && <p className="row-meta" style={{ fontSize: 12 }}>{topics.join(" · ")}</p>}
+      {whyByTopic.size > 0 && (
+        <div className="text-faint" style={{ fontSize: 12, margin: "4px 0 12px" }}>
+          {[...whyByTopic.entries()].map(([topic, why]) => (
+            <div key={topic}>
+              Why it&apos;s here: {topic}, {why.ai > 0 ? `AI matched ${why.ai} of ${why.articles} articles` : `${why.articles} articles by keyword only`}
+              {why.keywords.size > 0 && ` · keywords: ${[...why.keywords].slice(0, 6).join(", ")}`}
+            </div>
+          ))}
+        </div>
+      )}
 
       <FeedbackButtons storyId={story.id} />
 
