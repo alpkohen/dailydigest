@@ -1391,3 +1391,13 @@ a.feed-headline:hover {
     width: auto;
   }
 }
+
+/* Time an event last gained articles, after the New / Updated badge. */
+.feed-time {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}

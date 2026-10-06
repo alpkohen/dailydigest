@@ -42,6 +42,7 @@ export const limitsConfigSchema = z.object({
         .object({ critical: z.number().int(), follow_up: z.number().int(), worth_reading: z.number().int() })
         .default({ critical: 6, follow_up: 10, worth_reading: 10 }),
       use_search_apis: z.boolean().default(false),
+      ai_interval_hours: z.number().positive().default(6),
       coverage: z
         .object({
           window_days: z.number().int().positive(),

@@ -19,6 +19,8 @@ export interface TodayStory {
   whyItMatters?: string | null;
   sourceCount?: number;
   perspectiveCount?: number;
+  firstSeenAt?: string;
+  lastUpdatedAt?: string;
 }
 
 export interface TodayResearchItem {
@@ -81,6 +83,37 @@ function formatEdition(periodDate: string) {
 function estimateReadMinutes(stories: TodayStory[], research: TodayResearchItem[]) {
   const words = stories.reduce((n, s) => n + s.summary.split(/\s+/).length, 0) + research.reduce((n, r) => n + r.argument.split(/\s+/).length, 0);
   return Math.max(3, Math.round(words / 200));
+}
+
+// Istanbul time, the owner's clock, whatever the server's time zone.
+function istanbulTime(iso: string): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString("en-GB", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
+  const day = d.toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul" });
+  const today = new Date().toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul" });
+  return day === today ? time : `${d.toLocaleDateString("en-GB", { timeZone: "Europe/Istanbul", day: "numeric", month: "short" })} ${time}`;
+}
+
+/** "New" for events created since the previous update, "Updated" for older events that gained articles. */
+function freshness(story: TodayStory, freshSince: string | null): "New" | "Updated" | null {
+  if (!freshSince) return null;
+  if (story.firstSeenAt && story.firstSeenAt > freshSince) return "New";
+  if (story.lastUpdatedAt && story.lastUpdatedAt > freshSince) return "Updated";
+  return null;
+}
+
+function FreshTag({ story, freshSince }: { story: TodayStory; freshSince: string | null }) {
+  const label = freshness(story, freshSince);
+  return (
+    <>
+      {label && (
+        <span className={`badge ${label === "New" ? "badge-accent" : "badge-neutral"}`} style={{ marginLeft: 8 }}>
+          {label}
+        </span>
+      )}
+      {story.lastUpdatedAt && <span className="feed-time">{istanbulTime(story.lastUpdatedAt)}</span>}
+    </>
+  );
 }
 
 function sourceMeta(sourceCount?: number, perspectiveCount?: number) {
@@ -176,6 +209,8 @@ export function TodayView({
   questionWidget,
   savedStoryIds,
   savedItemIds,
+  lastUpdatedAt = null,
+  freshSince = null,
 }: {
   periodDate: string;
   headline: string;
@@ -186,6 +221,8 @@ export function TodayView({
   questionWidget?: TodayQuestionWidget | null;
   savedStoryIds: string[];
   savedItemIds: string[];
+  lastUpdatedAt?: string | null;
+  freshSince?: string | null;
 }) {
   const [tab, setTab] = useState<TabKey>("all");
   // A time-of-day greeting ("Good evening") only makes sense for the brief
@@ -234,6 +271,7 @@ export function TodayView({
         <span className="top-meta-status">
           <span className="status-dot" />
           {isToday ? "Today’s edition" : "Archived edition"}
+          {isToday && lastUpdatedAt && ` · Updated ${istanbulTime(lastUpdatedAt)}`}
         </span>
       </div>
 
@@ -283,6 +321,7 @@ export function TodayView({
                 <div className="feed-eyebrow critical">
                   <span className="dot" />
                   Critical{leadStory.topics[0] ? ` · ${leadStory.topics[0].toUpperCase()}` : ""}
+                  <FreshTag story={leadStory} freshSince={freshSince} />
                 </div>
                 <Link href={`/story/${leadStory.id}`} className="feed-headline lead">
                   {leadStory.title}
@@ -309,6 +348,7 @@ export function TodayView({
                 <div className={`feed-eyebrow${story.section === "critical" ? " critical" : story.section === "follow_up" ? " follow-up" : ""}`}>
                   <span className="dot" />
                   {SECTION_LABEL[story.section] ?? "Worth reading"}
+                  <FreshTag story={story} freshSince={freshSince} />
                 </div>
                 <Link href={`/story/${story.id}`} className="feed-headline">
                   {story.title}

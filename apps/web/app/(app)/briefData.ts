@@ -32,6 +32,10 @@ export interface TodayViewProps {
   questionWidget: TodayQuestionWidget | null;
   savedStoryIds: string[];
   savedItemIds: string[];
+  /** When the AI last processed new articles (live view only). */
+  lastUpdatedAt: string | null;
+  /** Events created or updated after this are marked New / Updated. */
+  freshSince: string | null;
 }
 
 type StoryRecord = {
@@ -40,10 +44,12 @@ type StoryRecord = {
   summary: string | null;
   why_it_matters: string | null;
   tier: number | null;
+  first_seen_at: string;
+  last_updated_at: string;
   story_topics: { topics: { name: string } | null }[];
 };
 
-const STORY_FIELDS = "id, title, summary, why_it_matters, tier, story_topics(topics(name))";
+const STORY_FIELDS = "id, title, summary, why_it_matters, tier, first_seen_at, last_updated_at, story_topics(topics(name))";
 const SECTION_BY_TIER: Record<number, string> = { 1: "critical", 2: "follow_up", 3: "worth_reading" };
 const LIVE_WINDOW_HOURS = 24;
 
@@ -71,6 +77,23 @@ async function loadLiveStories(supabase: SupabaseClient): Promise<{ section: str
     .order("last_updated_at", { ascending: false })
     .limit(1000);
   return ((data ?? []) as unknown as StoryRecord[]).map((story) => ({ section: SECTION_BY_TIER[story.tier ?? 3] ?? "worth_reading", story }));
+}
+
+/**
+ * The last two finished grouping runs: the latest is "last updated", the one
+ * before it is the line after which an event counts as New or Updated.
+ */
+async function loadUpdateTimes(supabase: SupabaseClient): Promise<{ lastUpdatedAt: string | null; freshSince: string | null }> {
+  const { data } = await supabase
+    .from("pipeline_runs")
+    .select("finished_at")
+    .eq("stats->>stage", "group")
+    .eq("status", "ok")
+    .not("finished_at", "is", null)
+    .order("finished_at", { ascending: false })
+    .limit(2);
+  const runs = (data ?? []) as { finished_at: string }[];
+  return { lastUpdatedAt: runs[0]?.finished_at ?? null, freshSince: runs[1]?.finished_at ?? null };
 }
 
 async function loadSourceCounts(supabase: SupabaseClient, storyIds: string[]) {
@@ -116,7 +139,10 @@ export async function loadTodayViewProps(
     whyItMatters: story.why_it_matters,
     sourceCount: countsByStory.get(story.id)?.sources.size,
     perspectiveCount: countsByStory.get(story.id)?.perspectives.size,
+    firstSeenAt: story.first_seen_at,
+    lastUpdatedAt: story.last_updated_at,
   }));
+  const updateTimes = options.live ? await loadUpdateTimes(supabase) : { lastUpdatedAt: null, freshSince: null };
   if (options.live) {
     stories.sort((a, b) => a.tier - b.tier || (b.sourceCount ?? 0) - (a.sourceCount ?? 0));
   }
@@ -204,5 +230,6 @@ export async function loadTodayViewProps(
     questionWidget,
     savedStoryIds,
     savedItemIds,
+    ...updateTimes,
   };
 }
