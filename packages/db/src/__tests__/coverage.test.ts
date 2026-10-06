@@ -36,8 +36,8 @@ describe("computeTopicCoverage", () => {
       sources,
       config,
     });
-    expect(result[0]!.warnings).toEqual(["Thin coverage: 9 items from 1 source in the last 7 days."]);
-    expect(result[1]!.warnings).toEqual(["Thin coverage: 0 items from 0 sources in the last 7 days."]);
+    expect(result[0]!.warnings).toEqual(["Few articles: 9 from 1 source in the last 7 days."]);
+    expect(result[1]!.warnings).toEqual(["Few articles: 0 from 0 sources in the last 7 days."]);
   });
 
   it("names active contributors that are now failing, ignoring muted ones", () => {
@@ -57,6 +57,6 @@ describe("computeTopicCoverage", () => {
       sources,
       config,
     });
-    expect(c!.warnings).toEqual(["Sources that fed this topic are failing: Al-Monitor (broken), TASS (degraded)."]);
+    expect(c!.warnings).toEqual(["Not receiving articles from: Al-Monitor, TASS."]);
   });
 });

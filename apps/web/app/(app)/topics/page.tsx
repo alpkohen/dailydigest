@@ -25,7 +25,7 @@ export default async function TopicsPage() {
     <main>
       <h1 className="h1-serif">Topics</h1>
       <TopicForm />
-      {withPrecision.map((t) => (
+      {withPrecision.filter((t) => t.active).map((t) => (
         <div key={t.id}>
           <TopicRow id={t.id} name={t.name} priority={t.priority} frequency={t.frequency} active={t.active} />
           {(warningsByTopic.get(t.id) ?? []).map((w) => (
@@ -44,6 +44,14 @@ export default async function TopicsPage() {
           )}
         </div>
       ))}
+      {withPrecision.some((t) => !t.active) && (
+        <section className="section" style={{ opacity: 0.55 }}>
+          <h2 className="h2-section">Paused</h2>
+          {withPrecision.filter((t) => !t.active).map((t) => (
+            <TopicRow key={t.id} id={t.id} name={t.name} priority={t.priority} frequency={t.frequency} active={t.active} />
+          ))}
+        </section>
+      )}
       {withPrecision.length === 0 && <p className="empty">No topics yet.</p>}
     </main>
   );

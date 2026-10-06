@@ -1435,6 +1435,8 @@ a.feed-headline:hover {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 .sidebar-topics-fill + .sidebar-eyebrow {
   margin-top: 12px;

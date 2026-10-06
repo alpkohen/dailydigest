@@ -51,7 +51,7 @@ export function computeTopicCoverage(params: {
 
     if (sources < config.min_sources || items < config.min_items) {
       warnings.push(
-        `Thin coverage: ${items} ${items === 1 ? "item" : "items"} from ${sources} ${sources === 1 ? "source" : "sources"} in the last ${config.window_days} days.`,
+        `Few articles: ${items} from ${sources} ${sources === 1 ? "source" : "sources"} in the last ${config.window_days} days.`,
       );
     }
 
@@ -61,10 +61,10 @@ export function computeTopicCoverage(params: {
           .filter((r) => r.topic_id === topic.id && r.source_id)
           .map((r) => sourceById.get(r.source_id!))
           .filter((s): s is CoverageSource => Boolean(s && s.active && (s.health_status === "broken" || s.health_status === "degraded")))
-          .map((s) => `${s.name} (${s.health_status})`),
+          .map((s) => s.name),
       ),
     ].sort();
-    if (failing.length > 0) warnings.push(`Sources that fed this topic are failing: ${failing.join(", ")}.`);
+    if (failing.length > 0) warnings.push(`Not receiving articles from: ${failing.join(", ")}.`);
 
     return { topicId: topic.id, topicName: topic.name, items, sources, warnings };
   });
