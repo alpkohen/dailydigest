@@ -4,3 +4,4 @@ export * from "./rateLimit.js";
 export * from "./signedLink.js";
 export * from "./urlSafety.js";
 export * from "./coverage.js";
+export * from "./topicLines.js";
