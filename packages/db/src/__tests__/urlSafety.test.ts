@@ -32,6 +32,12 @@ describe("assertPublicHttpUrl", () => {
     await expect(assertPublicHttpUrl("http://172.16.4.4/")).rejects.toThrow();
     await expect(assertPublicHttpUrl("http://192.168.1.1/")).rejects.toThrow();
     await expect(assertPublicHttpUrl("http://169.254.169.254/latest/meta-data/")).rejects.toThrow();
+    await expect(assertPublicHttpUrl("http://192.0.0.169/")).rejects.toThrow();
+    await expect(assertPublicHttpUrl("http://192.0.2.10/")).rejects.toThrow();
+  });
+
+  it("allows public addresses inside 192.0.0.0/16 outside the reserved /24s", async () => {
+    await expect(assertPublicHttpUrl("http://192.0.66.184/feed")).resolves.toBeUndefined();
   });
 
   it("rejects literal private/loopback IPv6 addresses", async () => {

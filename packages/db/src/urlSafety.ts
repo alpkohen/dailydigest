@@ -58,7 +58,7 @@ function isPrivateOrReservedIp(address: string): boolean {
 function isPrivateOrReservedIpv4(address: string): boolean {
   const parts = address.split(".").map(Number);
   if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true;
-  const [a, b] = parts as [number, number, number, number];
+  const [a, b, c] = parts as [number, number, number, number];
 
   if (a === 0) return true; // "this" network
   if (a === 10) return true; // RFC1918
@@ -66,7 +66,9 @@ function isPrivateOrReservedIpv4(address: string): boolean {
   if (a === 169 && b === 254) return true; // link-local, incl. 169.254.169.254 cloud metadata
   if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
   if (a === 192 && b === 168) return true; // RFC1918
-  if (a === 192 && b === 0) return true; // IETF protocol assignments / 192.0.0.0/24 (incl. 192.0.0.169 metadata alias)
+  // Only 192.0.0.0/24 (IETF protocol assignments, incl. 192.0.0.169 metadata alias) and
+  // 192.0.2.0/24 (TEST-NET-1) are reserved; the rest of 192.0.0.0/16 is public (e.g. 192.0.66.x).
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // carrier-grade NAT, RFC6598
   if (a >= 224) return true; // multicast (224/4) and reserved (240/4)
 
